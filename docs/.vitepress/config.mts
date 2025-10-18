@@ -4,9 +4,6 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Spring Boot 实战',
   description: '基于 Spring Boot 3.4.x 与 Java 21 的实战与示例',
-  rewrites: {
-    'index.md': '/chapters/01-introduction',
-  },
   themeConfig: {
     nav: [],
     sidebar: {
@@ -14,7 +11,7 @@ export default defineConfig({
         {
           text: '目录',
           items: [
-            { text: '第1章 简介', link: '/chapters/01-introduction' },
+            { text: '第1章 启动 Spring Boot', link: '/chapters/01-introduction' },
             { text: '第2章 常用任务', link: '/chapters/02-common-tasks' },
             { text: '第3章 数据访问', link: '/chapters/03-data-access' },
             { text: '第4章 自动配置与监控', link: '/chapters/04-autoconfiguration-and-actuator' },
