@@ -1,10 +1,12 @@
 # Spring Boot 实战
 
-<img src="docs/assets/spring-boot-in-practice.png" alt="Spring Boot in Practice Book Cover" align="right" width="250">
+<img src="docs/assets/spring-boot-in-practice.png" alt="The book cover of 'Spring Boot in Practice' by Somnath Musib" align="left" height="180px" />
 
 本仓库是《Spring Boot in Practice》一书的中文学习笔记与配套代码示例。使用最新的 **Spring Boot 3.4.x** 与 **Java 21** 进行实践，提供按章节组织的可运行代码样例。
 
 《Spring Boot in Practice》包含数十种实用的 Spring Boot 开发技巧，从基础功能到隐藏特性。每个示例都围绕真实问题构建，展示 Spring Boot 如何提供简洁优雅的解决方案。
+
+本项目致力于通过学习笔记风格的重述和现代化的代码实现，帮助开发者快速掌握 Spring Boot 的核心概念和最佳实践。所有示例代码均经过测试，可直接运行学习。
 
 ## 你将学到什么？
 
@@ -126,7 +128,3 @@ spring-boot-in-practice/
 ## 许可证
 
 本项目采用 MIT 许可证。示例代码可自由使用和修改。
-
----
-
-**开始学习**: 访问文档站点或直接查看 `docs/chapters/01-introduction.md` 开始你的 Spring Boot 实战之旅！
