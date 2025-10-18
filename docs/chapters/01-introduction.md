@@ -701,7 +701,7 @@ management:
 更多可用的 `application.properties` 配置项可参考：[http://mng.bz/REJ0](http://mng.bz/REJ0)
 
 
-### 创建可执行的 JAR 文件（Creating an executable JAR file）
+### 1.3.3 创建可执行的 JAR 文件（Creating an executable JAR file）
 
 生成 Spring Boot 项目后，最简单的方式是使用以下命令创建可执行 JAR 文件：
 
@@ -722,7 +722,7 @@ java -jar spring-boot-app-demo.jar
 Spring Boot 的 `spring-boot-maven-plugin` 插件在打包阶段会自动调用 `repackage` 目标，将普通 JAR 重新打包为可执行 JAR。
 
 
-### 探索 JAR 文件结构（Exploring the JAR file）
+### 1.3.4 探索 JAR 文件结构（Exploring the JAR file）
 
 当你打开生成的 JAR 文件时，将看到类似如下的结构。
 
@@ -780,7 +780,7 @@ spring-boot-app-demo.jar
 你将在第 9 章学习如何在创建 Docker 镜像时使用 `layer.idx`。
 
 
-### 关闭 Spring Boot 应用（Shutting down a Spring Boot application）
+### 1.3.5 关闭 Spring Boot 应用（Shutting down a Spring Boot application）
 
 关闭 Spring Boot 应用的方式相对简单。
 
@@ -812,6 +812,171 @@ spring.lifecycle.timeout-per-shutdown-phase=1m
 > **注意（Note）**
 > 优雅关闭功能自 Spring Boot **2.3.0** 版本引入，
 > 早期版本不支持该配置。
+
+## 1.4 Spring Boot 附加概念（Spring Boot additional concepts）
+
+在本节中，我们将简要介绍一些有用的 Spring Boot 概念。  
+这些都是框架中的关键概念，后续章节会进一步展开。
+
+
+### 1.4.1 Spring Boot 启动事件（Spring Boot startup events）
+
+Spring 框架的事件管理机制促进了事件发布者与订阅者之间的解耦。  
+它允许你订阅框架中内置的事件，也可以定义自定义事件。
+
+Spring Boot 框架还提供了多个内置事件，你可以订阅这些事件以执行特定操作。  
+例如，当你的 Spring Boot 应用程序启动完成时，可能需要调用一个外部 REST API。  
+本节将介绍 Spring Boot 中几个关键的事件，这些事件会在应用程序启动或初始化的不同阶段发布：
+
+
+- **`ApplicationStartingEvent`**  
+  在应用启动开始时（监听器注册完成后）发布。  
+  Spring Boot 的 `LoggingSystem` 会使用该事件来执行初始化前的任务，例如准备日志系统。
+
+- **`ApplicationEnvironmentPreparedEvent`**  
+  当应用正在启动且 `Environment` 已准备好供检查与修改时发布。  
+  Spring Boot 会在此阶段内部初始化一些服务，例如 `MessageConverter`、`ConversionService`、Jackson 初始化等。
+
+- **`ApplicationContextInitializedEvent`**  
+  当 `ApplicationContext` 已准备好但尚未加载任何 Bean 定义时发布。  
+  此时 `ApplicationContextInitializers` 已被执行，可在 Bean 初始化前执行某些任务。
+
+- **`ApplicationPreparedEvent`**  
+  当 `ApplicationContext` 准备完成但尚未刷新时发布。  
+  Bean 定义已加载，但尚不可用。  
+  此时 `Environment` 已准备好，可用于配置检查。
+
+- **`ContextRefreshedEvent`**  
+  当 `ApplicationContext` 刷新完成时发布。  
+  该事件来自 Spring（而非 Spring Boot）。  
+  Spring Boot 的 `ConditionEvaluationReportLoggingListener` 会监听此事件，并在触发时打印自动配置报告。
+
+- **`WebServerInitializedEvent`**  
+  当内置 Web 服务器启动并准备就绪时发布。  
+  该事件有两种变体：  
+  - `ServletWebServerInitializedEvent`：用于 Servlet 应用  
+  - `ReactiveWebServerInitializedEvent`：用于响应式应用  
+  它不继承自 `SpringApplicationEvent`。
+
+- **`ApplicationStartedEvent`**  
+  当 `ApplicationContext` 已刷新，但 `ApplicationRunner` 和 `CommandLineRunner` 尚未执行时发布。
+
+- **`ApplicationReadyEvent`**  
+  当 Spring Boot 应用准备好接收请求时发布。  
+  此时应用完全初始化完毕，不建议再修改其内部状态。
+
+- **`ApplicationFailedEvent`**  
+  当启动过程中发生异常或失败时发布。  
+  可用于记录错误日志或执行清理操作。
+
+
+::: tip 译者注
+这些事件的执行顺序大致从应用启动 → 环境准备 → 上下文初始化 → 上下文刷新 → Web服务器启动 → 应用准备完成。  
+理解这些事件的生命周期，对于在启动阶段执行自定义逻辑（如初始化资源、打印日志、延迟加载配置等）非常有帮助。
+:::
+
+### 1.4.2 在 Spring Boot 应用中监听事件（Listening events in a Spring Boot application）
+
+Spring Boot 在应用启动期间会发布多个事件，用于提供应用初始化各阶段的有用信息。  
+这些事件对于需要编程式控制应用启动行为的场景非常有帮助。  
+最简单的方式是订阅这些事件并执行必要的操作。  
+例如，如果你需要在启动早期修改 `Environment` 参数，可以订阅 `ApplicationEnvironmentPreparedEvent`。  
+Spring Boot 自身也会使用这些事件来初始化内部组件。
+
+下面我们来讨论几种监听这些事件的方法。最简单的方式是使用 Spring 框架的 `@EventListener` 注解。  
+例如，要监听 `ApplicationReadyEvent`，可以参考以下代码示例：
+
+> 示例 1.8 使用 @EventListener 监听 ApplicationReadyEvent
+
+```java
+@EventListener(ApplicationReadyEvent.class)
+public void applicationReadyEvent(ApplicationReadyEvent applicationReadyEvent) {
+    System.out.println("Application Ready Event generated at " + new Date(applicationReadyEvent.getTimestamp()));
+}
+```
+
+上面的代码片段会打印 `ApplicationReadyEvent` 触发的时间戳。  
+
+尽管 `@EventListener` 在大多数情况下都适用，但它**无法监听应用启动非常早期发布的事件**，例如 `ApplicationStartingEvent` 或 `ApplicationEnvironmentPreparedEvent`。
+
+在这些场景下，需要使用其他方式监听事件。
+
+**使用 SpringApplication （Using SpringApplication）**
+
+在典型的 Spring Boot 项目中，应用类会通过 `SpringApplication.run()` 方法启动。
+
+`SpringApplication` 还提供了多种 setter 方法来定制启动行为，例如添加 `ApplicationContextInitializer`、设置 `ApplicationListener` 等。
+
+要通过 `SpringApplication` 监听事件，可以创建一个实现了 `ApplicationListener` 接口的自定义监听器类，并在其中实现 `onApplicationEvent()` 方法。例如：
+
+> 示例 1.9 创建自定义 ApplicationListener
+
+```java
+public class ApplicationStartingEventListener implements ApplicationListener<ApplicationStartingEvent> {
+
+    @Override
+    public void onApplicationEvent(ApplicationStartingEvent applicationStartingEvent) {
+        System.out.println("Application Starting Event logged at " + new Date(applicationStartingEvent.getTimestamp()));
+    }
+}
+```
+
+然后在应用启动类中注册该监听器：
+
+> 示例 1.10 在 SpringApplication 中添加 ApplicationListener
+
+```java
+@SpringBootApplication
+public class SpringBootEventsApplication {
+
+    public static void main(String[] args) {
+        SpringApplication springApplication = new SpringApplication(SpringBootEventsApplication.class);
+        springApplication.addListeners(new ApplicationStartingEventListener());
+        springApplication.run(args);
+    }
+}
+```
+
+在上面的代码中，我们通过 `addListeners(...)` 方法向 `SpringApplication` 实例添加了自定义监听器。
+
+该方法支持可变参数（varargs），因此可以同时注册多个监听器。
+
+不过这种方式需要修改应用启动类的代码。
+
+如果你希望**无需改动代码即可注册监听器**，可以通过 `spring.factories` 文件来实现。
+
+
+**使用 spring.factories 文件（Using the spring.factories file）**
+
+`spring.factories` 文件为 Spring Boot 提供了一个扩展点，可用于配置和自定义初始化器、监听器、自动配置、失败分析器、模板提供者等。
+
+该文件是一个键值对形式的属性文件，通常位于项目的 `src/main/resources/META-INF` 目录下。
+
+Spring Boot 允许你在 `spring.factories` 中注册自定义 `ApplicationListener`，例如：
+
+> 示例 1.11 spring.factories 文件示例
+
+```
+org.springframework.context.ApplicationListener=com.manning.sbip.ch01.listener.ApplicationStartingEventListener
+```
+
+在上面的配置中：
+
+* **键（key）** 是你要配置的组件类型（此处是 `org.springframework.context.ApplicationListener`）；
+* **值（value）** 是对应实现类的**全限定类名**（此处是自定义监听器 `ApplicationStartingEventListener`）。
+
+你可以在同一个文件中通过逗号分隔多个实现类。
+
+在后续章节中，我们还会看到 Spring Boot 如何使用 `spring.factories` 机制来注册自动配置、失败分析器等组件。
+
+::: tip 译者注
+一般情况下：
+* 若事件较晚触发，可使用 `@EventListener`；
+* 若事件在启动早期发布（如 `ApplicationStartingEvent`），需使用 `ApplicationListener` 方式；
+* 若想避免修改源码，可在 `spring.factories` 中注册监听器。
+
+这三种方法覆盖了 Spring Boot 应用中监听事件的所有典型场景。
+:::
 
 
 ## 小结
