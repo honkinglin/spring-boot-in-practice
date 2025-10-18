@@ -239,7 +239,7 @@ Spring Boot 支持多种 SQL 与 NoSQL 数据库。
 
 ::: tip
 
-### 记录类型（Record）
+**记录类型（Record）**
 
 **Java 14** 引入了新的语言特性——**record（记录类）**。
 Record 是一种不可变的数据类（immutable data class），
@@ -567,8 +567,9 @@ public class SpringBootAppDemoApplication {
 3. 刷新 `ApplicationContext`，加载所有单例 Bean；
 4. 触发应用中配置的 `ApplicationRunner` 和 `CommandLineRunner`。
 
+::: tip
 
-### 回顾 ApplicationContext（Revisiting ApplicationContext）
+**回顾 ApplicationContext（Revisiting ApplicationContext）**
 
 大多数 Java 应用都由多个对象组成，这些对象相互依赖。
 
@@ -581,6 +582,237 @@ Bean 定义可以通过 XML 文件（如 `applicationContext.xml`）或注解配
 Spring 根据应用类型（Servlet 或 Reactive）及配置方式（classpath 或注解）提供多种 `ApplicationContext` 实现。
 
 你可以在以下链接中了解更多相关内容：[http://mng.bz/AxJK](http://mng.bz/AxJK)
+
+:::
+
+### SpringApplication 的类型选择（Customizing SpringApplication to select the application type）
+
+`SpringApplication` 类会根据 classpath 中的 JAR 依赖尝试创建合适的 `ApplicationContext` 实例。
+
+一个 Spring Boot 应用可以是 **基于 Servlet** 或 **基于响应式（Reactive）** 的应用。
+
+Spring Boot 通过分析 classpath 中的依赖类来判断当前应用的类型。
+
+确定类型后，Spring Boot 会应用以下策略加载应用上下文：
+
+1. 如果应用被识别为基于 Servlet 的 Web 应用，
+   Spring Boot 将创建 `AnnotationConfigServletWebServerApplicationContext` 实例；
+2. 如果应用是响应式类型，
+   Spring Boot 将创建 `AnnotationConfigReactiveWebServerApplicationContext` 实例；
+3. 如果既不是 Servlet 应用，也不是响应式应用，
+   Spring Boot 则会创建 `AnnotationConfigApplicationContext` 实例。
+
+通常，我们通过 `SpringApplication.run()` 方法启动 Spring Boot 应用。
+
+不过，Spring Boot 还允许我们显式创建 `SpringApplication` 实例，以自定义启动行为。
+
+例如，如果你已知应用类型，可以直接在 `SpringApplication` 实例中设置，示例如下。
+
+> **代码清单 1.3**　自定义 SpringApplication 实例，将应用类型设为响应式（Reactive）
+
+```java
+package com.manning.sbip.ch01;
+
+// 导入相关 Spring Boot 包（此处省略）
+@SpringBootApplication
+public class BootstrappingSpringBootAppApplication {
+
+    public static void main(String[] args) {
+
+        // 创建一个 SpringApplication 实例，
+        // 参数为当前主启动类（BootstrappingSpringBootAppApplication.class）
+        SpringApplication springApplication =
+                new SpringApplication(BootstrappingSpringBootAppApplication.class);
+
+        // 设置应用类型为 REACTIVE（响应式应用）
+        // 可选值包括：
+        // - WebApplicationType.SERVLET：传统 Servlet 应用（默认）
+        // - WebApplicationType.REACTIVE：响应式应用（如使用 WebFlux）
+        // - WebApplicationType.NONE：非 Web 应用
+        springApplication.setWebApplicationType(WebApplicationType.REACTIVE);
+
+        // 运行应用（相当于 SpringApplication.run(...)）
+        springApplication.run(args);
+    }
+}
+```
+
+
+`SpringApplication` 还提供了多种 setter 方法，可用于控制不同的 Spring Boot 特性，例如设置额外的 Spring Profile，或指定资源加载器以加载应用资源等。
+
+关于 `SpringApplication` 的更多内容，可参考 [Spring Boot 官方文档](http://mng.bz/ZzJO)
+
+
+### 使用 application.properties 文件管理配置（Configuration management with the application.properties file）
+
+Spring Initializr 会在 `src/main/resources` 目录下生成一个空的 `application.properties` 文件。
+
+该文件允许你以外部化方式配置应用属性（例如服务器详情、数据库信息等）。
+
+虽然 Spring Boot 支持多种配置方式，但使用 `application.properties` 文件是最常见的方法。
+
+在该文件中，配置项以 `key=value` 的形式定义。
+
+下面的示例展示了如何在 `application.properties` 文件中设置服务器地址与端口号。
+
+> **代码清单 1.4**　配置服务器地址与端口的 application.properties 示例
+
+```properties
+# ---------------------------
+# Listing 1.4
+# application.properties 文件内容
+# 用于配置 Spring Boot 应用的网络地址和端口
+# ---------------------------
+
+# 指定服务器绑定的网络地址
+# 通常为 localhost（仅在本机访问）
+server.address=localhost
+
+# 指定服务器 HTTP 端口号
+# 默认是 8080，这里显式设置为 8081
+server.port=8081
+
+# 指定要通过 HTTP 暴露的所有 Actuator 端点
+# “*” 表示暴露全部端点（仅建议在本地开发或调试时使用）
+management.endpoints.web.exposure.include=*
+```
+
+若要验证此配置，你可以修改 `server.port` 的值，例如改为 `9090`，然后重新启动应用，即可看到服务运行在新的端口上。
+
+如果你更倾向于使用 YAML 格式进行配置，可以参考 [https://yaml.org/spec/1.2/spec.html](https://yaml.org/spec/1.2/spec.html)。
+
+YAML 支持层级结构的配置方式。
+
+要使用 YAML 格式，只需将 `application.properties` 重命名为 `application.yml`，并按以下格式编写配置：
+
+> **代码清单 1.5**　等价的 application.yml 配置示例
+
+```yaml
+server:
+  address: localhost
+  port: 8080
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+```
+
+更多可用的 `application.properties` 配置项可参考：[http://mng.bz/REJ0](http://mng.bz/REJ0)
+
+
+### 创建可执行的 JAR 文件（Creating an executable JAR file）
+
+生成 Spring Boot 项目后，最简单的方式是使用以下命令创建可执行 JAR 文件：
+
+```bash
+mvn package
+```
+
+根据生成时的选择，Maven 会在 `target` 目录中创建 JAR 文件。
+
+可执行 JAR 文件可通过以下命令运行：
+
+```bash
+java -jar spring-boot-app-demo.jar
+```
+
+默认情况下，Maven 的 `package` 目标不会生成可执行文件。
+
+Spring Boot 的 `spring-boot-maven-plugin` 插件在打包阶段会自动调用 `repackage` 目标，将普通 JAR 重新打包为可执行 JAR。
+
+
+### 探索 JAR 文件结构（Exploring the JAR file）
+
+当你打开生成的 JAR 文件时，将看到类似如下的结构。
+
+> **代码清单 1.6**　Spring Boot 生成的 JAR 文件结构
+
+```
+spring-boot-app-demo.jar
+|
++-META-INF
+|   +-MANIFEST.MF
+|
++-org
+|   +-springframework
+|       +-boot
+|           +-loader
+|               +-<spring boot loader classes>
+|
++-BOOT-INF
+|   +-classes
+|   |   +-com
+|   |       +-manning
+|   |           +-sbip
+|   |               +-ch01
+|   |                   +-SpringBootAppDemoApplication.class
+|   +-lib
+|       +-dependency1.jar
+|       +-dependency2.jar
+|   +-classpath.idx
+|   +-layers.idx
+```
+
+整个结构可分为四个主要部分：
+
+* **META-INF**
+  包含 `MANIFEST.MF` 文件，其中记录了 JAR 运行所需的重要元信息，关键参数包括 `Main-Class` 和 `Start-Class`。
+
+* **Spring Boot 加载器组件（Spring Boot loader components）**
+  Spring Boot 提供多种类加载器实现，用于加载可执行文件。
+  例如：
+
+  * `JarLauncher` 用于加载 JAR 文件；
+  * `WarLauncher` 用于加载 WAR 文件；
+  * `PropertiesLauncher` 可通过配置属性（`loader.*`）自定义加载行为。
+
+* **BOOT-INF/classes**
+  存放应用的编译后类文件。
+
+* **BOOT-INF/lib**
+  存放应用所依赖的所有外部库文件。
+
+其中 `classpath.idx` 文件用于列出类加载器的加载顺序；
+
+`layers.idx` 文件用于将 JAR 分层，便于 Docker 或 OCI 镜像构建。
+
+你将在第 9 章学习如何在创建 Docker 镜像时使用 `layer.idx`。
+
+
+### 关闭 Spring Boot 应用（Shutting down a Spring Boot application）
+
+关闭 Spring Boot 应用的方式相对简单。
+
+如果以前台进程运行 JAR 文件，可直接在命令行使用 **Ctrl + C**（Windows 或 Linux）终止进程。
+
+如果应用在后台运行，可使用操作系统命令终止对应的 Java 进程。
+
+然而，上述方式会导致应用立即终止，无法保证当前正在执行的请求得到妥善处理。
+
+为了避免中断用户请求，我们应当配置 **优雅关闭（graceful shutdown）**，使系统能在关闭前完成正在执行的任务。
+
+以下是配置示例：
+
+> **代码清单 1.7**　优雅关闭（graceful shutdown）配置
+
+```properties
+server.shutdown=graceful
+spring.lifecycle.timeout-per-shutdown-phase=1m
+```
+
+`server.shutdown` 属性默认值为 `immediate`，即应用立即终止。
+
+配置为 `graceful` 后，Spring Boot 会等待当前请求处理完毕再关闭。
+
+`spring.lifecycle.timeout-per-shutdown-phase` 的默认值为 `30s`，你可以根据需要自定义超时时间。
+
+上例中设置为 `1m`（1 分钟）。
+
+> **注意（Note）**
+> 优雅关闭功能自 Spring Boot **2.3.0** 版本引入，
+> 早期版本不支持该配置。
+
 
 ## 小结
 
