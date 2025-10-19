@@ -12,7 +12,6 @@
   "keywords": ["Spring Boot"],
   "author": "Kyrie Lin",
   "license": "MIT",
-  "packageManager": "pnpm@10.18.3",
   "devDependencies": {
     "vitepress": "^1.6.4"
   }
