@@ -10,14 +10,6 @@ samples:
 
 本章将介绍 Spring Boot 的核心理念、设计哲学和快速入门方法。你将了解 Spring Boot 如何简化 Spring 应用开发，以及如何创建第一个可运行的 Web 应用。
 
-## 本章内容
-
-- Spring Boot 简介与核心特性
-- 为什么选择 Spring Boot
-- Spring Boot 的约定优于配置（Convention over Configuration）
-- 创建第一个 Spring Boot Web 应用
-- 理解 Spring Boot 的启动流程
-
 ## 配套示例
 
 本章配套示例位于 `samples/ch01/web-api`，演示了一个最简单的 Spring Boot Web API 应用。
@@ -34,24 +26,19 @@ mvn spring-boot:run -pl ch01/web-api
 
 ## 1.1 介绍 Spring Boot（Introducing Spring Boot）
 
-在本节中，我们将向你介绍 Spring Boot 框架，并简要回答一些有关 Spring Boot 的常见问题。
-
+在本节中，我们将向你介绍 Spring Boot 框架，并简要回答一些有关 Spring Boot 的常见问题。  
 我们将讨论为什么需要 Spring Boot 框架，介绍该框架本身、它所提供的各种特性，以及框架的主要组成部分。
 
 
 ### 1.1.1 为什么选择 Spring Boot？（Why Spring Boot?）
 
-当我们开始这段熟悉 Spring Boot 的美好旅程时，脑海中浮现的第一个问题通常是：**我们为什么要学习它？**
-
+当我们开始这段熟悉 Spring Boot 的美好旅程时，脑海中浮现的第一个问题通常是：**我们为什么要学习它？**  
 要回答这个问题，让我们先了解 Spring Boot 希望解决哪些问题。
 
-Spring Framework 的最初目标是简化 Java 企业级应用的开发。
-
-它因简化的应用开发策略以及框架所承担的“繁重工作”而广受欢迎。
-
-然而，随着 Spring 被越来越多地用作开发框架，进一步简化 Spring 应用开发流程的需求也随之增强。
-
-尽管 Spring 在帮助开发者专注于业务逻辑方面提供了极大的支持，但在 Spring Boot 出现之前，开发者仍然需要完成大量使应用正常运行的工作。
+Spring Framework 的最初目标是简化 Java 企业级应用的开发。  
+它因简化的应用开发策略以及框架所承担的“繁重工作”而广受欢迎。  
+随着 Spring 被越来越多地用作开发框架，进一步简化 Spring 应用开发流程的需求也随之增强。  
+尽管 Spring 在帮助开发者专注于业务逻辑方面提供了极大的支持，但在 Spring Boot 出现之前，开发者仍然需要完成大量使应用正常运行的工作。  
 
 例如，在开发基于 Spring 的 Web 应用时，你将面临以下一些挑战：
 
@@ -62,33 +49,24 @@ Spring Framework 的最初目标是简化 Java 企业级应用的开发。
 
 这些技术概念层出不穷。
 
-假如你只是希望编写应用的业务逻辑、生成一个可执行文件并在命令行中运行它，却仍然需要应对大量复杂的 XML 配置或其他技术细节——这显然过于繁琐。
+假如你只是希望编写应用的业务逻辑、生成一个可执行文件并在命令行中运行它，却仍然需要应对大量复杂的 XML 配置或其他技术细节——这显然过于繁琐。  
+Spring Boot 正是为了解决这些问题而诞生。  
+随着你在学习过程中不断深入，会发现 Spring Boot 能够轻松处理许多配置与集成问题。  
 
-Spring Boot 正是为了解决这些问题而诞生。
-
-随着你在学习过程中不断深入，会发现 Spring Boot 能够轻松处理许多配置与集成问题。
-
-例如，在 Spring Boot 项目中，你无需定义 `web.xml` 部署描述文件；
-
-你也无需在外部应用服务器上运行应用，除非你特别希望这样做。
-
+例如，在 Spring Boot 项目中，你无需定义 `web.xml` 部署描述文件；  
+你也无需在外部应用服务器上运行应用，除非你特别希望这样做。  
 在大多数情况下，Spring Boot 的默认配置足以满足你的开发需求。
-
 
 ### 1.1.2 什么是 Spring Boot？（What is Spring Boot?）
 
-Spring Boot 于 2014 年 4 月发布，旨在减轻 Java Web 应用开发的负担。
-
-它让开发者能够更多地专注于业务逻辑，而不是编写模板化的技术性代码和复杂的配置。
-
+Spring Boot 于 2014 年 4 月发布，旨在减轻 Java Web 应用开发的负担。  
+它让开发者能够更多地专注于业务逻辑，而不是编写模板化的技术性代码和复杂的配置。  
 Spring Boot 的目标是创建一个基于 Spring 的、**可直接投入生产的独立应用**，并且在尽可能少的配置修改下即可运行。
 
-它采用了一种“主见式（opinionated）”的方式，在 Spring Framework 之上提供了额外的一层封装，使应用开发者能够更快地开始项目，并根据实际需求调整配置。
+它采用了一种“主见式（opinionated）”的方式，在 Spring Framework 之上提供了额外的一层封装，使应用开发者能够更快地开始项目，并根据实际需求调整配置。  
+它为用户简化了某些配置任务，从而提高了开发效率。  
 
-它为用户简化了某些配置任务，从而提高了开发效率。
-
-下图展示了 Spring Boot 在开发者与 Spring Framework 之间所处的位置。
-
+下图展示了 Spring Boot 在开发者与 Spring Framework 之间所处的位置。  
 作为中间层，Spring Boot 在两者之间起到桥梁作用。
 
 > **图 1.1**　Spring Boot 在 Spring 生态系统中的位置
@@ -181,70 +159,52 @@ Spring Boot 由多个组件组成，每个组件负责应用开发的特定领�
 
 ## 1.2 代码示例（Code examples）
 
-在本节中，我们将讨论本书中使用的代码示例及其所采用的相关技术。
-
-我们将介绍构建系统、编程语言以及本书示例所使用的数据库。
-
+在本节中，我们将讨论本书中使用的代码示例及其所采用的相关技术。  
+我们将介绍构建系统、编程语言以及本书示例所使用的数据库。  
 此外，还将介绍 Lombok 库，它可以通过简单的注解帮助我们简化 POJO 类（Plain Old Java Object）的定义。
 
 ### 1.2.1 Maven 与 Gradle（Maven vs. Gradle）
 
-Spring Boot 允许你使用 [**Apache Maven**](https://maven.apache.org/)或 [**Gradle**](https://gradle.org/) 来创建 Spring Boot 项目。
-
-在 [**Spring Initializr** 工具](https://start.spring.io/) 中，你可以选择任意一种构建系统生成项目。
-
-在本书中，我们将使用 **Apache Maven** 作为首选构建工具，因为大多数读者对 Maven 更加熟悉。
-
+Spring Boot 允许你使用 [**Apache Maven**](https://maven.apache.org/)或 [**Gradle**](https://gradle.org/) 来创建 Spring Boot 项目。  
+在 [**Spring Initializr** 工具](https://start.spring.io/) 中，你可以选择任意一种构建系统生成项目。  
+在本书中，我们将使用 **Apache Maven** 作为首选构建工具，因为大多数读者对 Maven 更加熟悉。  
 然而，如果你偏好使用 Gradle，也可以轻松地将书中的代码示例迁移到 Gradle 环境中。
-
 
 ### 1.2.2 Java 与 Kotlin（Java vs. Kotlin）
 
-你可以在 Spring Boot 项目中使用 **Java** 或 [**Kotlin**](https://kotlinlang.org/) 作为编程语言。
-
-自 Spring Framework 5.0 起，框架已正式加入对 Kotlin 的支持，并且此后一直在不断增强 Kotlin 的兼容性。
-
+你可以在 Spring Boot 项目中使用 **Java** 或 [**Kotlin**](https://kotlinlang.org/) 作为编程语言。  
+自 Spring Framework 5.0 起，框架已正式加入对 Kotlin 的支持，并且此后一直在不断增强 Kotlin 的兼容性。  
 例如，在 **Spring Security 5.3** 中，Spring 团队引入了面向 Kotlin 的 DSL（领域特定语言）版本，以便更好地在 Kotlin 环境中使用 Spring Security。
 
-你可以通过以下链接了解更多有关 Spring 对 [Kotlin](http://mng.bz/Bxw8) 的支持信息。
-
-在本书中，我们主要使用 **Java** 作为代码示例的编程语言。
+你可以通过以下链接了解更多有关 Spring 对 [Kotlin](http://mng.bz/Bxw8) 的支持信息。  
+在本书中，我们主要使用 **Java** 作为代码示例的编程语言。  
 
 不过，在第 10 章中，我们将介绍 Spring Framework（通过 Spring Boot）中主要的 Kotlin 特性。
 
 ### 1.2.3 数据库支持（Database support）
 
-本书中的若干示例需要使用数据库来演示相关概念。
-
-Spring Boot 支持多种 SQL 与 NoSQL 数据库。
-
-为便于演示与测试，本书将主要使用 **H2 内存数据库（H2 in-memory SQL database）**。
-
+本书中的若干示例需要使用数据库来演示相关概念。  
+Spring Boot 支持多种 SQL 与 NoSQL 数据库。  
+为便于演示与测试，本书将主要使用 **H2 内存数据库（H2 in-memory SQL database）**。  
 除个别例外情况外，所有示例均会采用此数据库环境。
 
 ### 1.2.4 Lombok
 
-[**Lombok**](https://projectlombok.org/) 是一个 Java 库，可通过注解自动生成构造函数、getter、setter、`toString()` 等方法。
-
-开发者只需在普通的 Java POJO 类中添加相应注解即可。
-
+[**Lombok**](https://projectlombok.org/) 是一个 Java 库，可通过注解自动生成构造函数、getter、setter、`toString()` 等方法。  
+开发者只需在普通的 Java POJO 类中添加相应注解即可。  
 例如，为所有成员变量生成 getter 方法，只需添加 `@Getter` 注解即可。
 
-在本书的代码示例中，我们将广泛使用 Lombok 来简化类定义。
-
-如果你不想使用 Lombok，也可以手动编写 getter、setter 和构造函数。
-
+在本书的代码示例中，我们将广泛使用 Lombok 来简化类定义。  
+如果你不想使用 Lombok，也可以手动编写 getter、setter 和构造函数。  
 无论是否使用 Lombok，本书中的代码示例都可以正常运行。
-
 
 ::: tip
 
 **记录类型（Record）**
 
 **Java 14** 引入了新的语言特性——**record（记录类）**。
-Record 是一种不可变的数据类（immutable data class），
-它只需声明字段的类型与名称，Java 编译器便会自动生成 `equals()`、`hashCode()` 和 `toString()` 方法，
-同时生成私有的 `final` 字段、对应的 getter 方法以及公共构造函数。
+
+Record 是一种不可变的数据类（immutable data class），它只需声明字段的类型与名称，Java 编译器便会自动生成 `equals()`、`hashCode()` 和 `toString()` 方法，同时生成私有的 `final` 字段、对应的 getter 方法以及公共构造函数。
 
 如果你不希望使用像 Lombok 这样的第三方库，可以考虑使用原生的 Java record。
 
@@ -254,8 +214,7 @@ Record 定义示例如下：
 public record Course(int id, String name, String description, int rating) {}
 ```
 
-编译器会自动为每个定义的字段生成构造函数和 getter 方法（如 `id()`, `name()` 等），
-同时生成 `equals()` 与 `hashCode()` 方法。
+编译器会自动为每个定义的字段生成构造函数和 getter 方法（如 `id()`, `name()` 等），同时生成 `equals()` 与 `hashCode()` 方法。
 
 你可以通过以下链接了解更多关于 [Java record](http://mng.bz/donO) 的信息。
 
@@ -266,7 +225,6 @@ public record Course(int id, String name, String description, int rating) {}
 至此，你已经对 Spring Boot 有了整体了解，并明白了该框架的主要用途。
 
 在本节中，你将学习如何生成一个 Spring Boot 项目，并了解其自动生成项目的各个组成部分。
-
 
 ### 1.3.1 你的第一个 Spring Boot 项目（Your first Spring Boot project）
 
@@ -978,7 +936,128 @@ org.springframework.context.ApplicationListener=com.manning.sbip.ch01.listener.A
 这三种方法覆盖了 Spring Boot 应用中监听事件的所有典型场景。
 :::
 
+### 1.4.3 自定义 Spring Boot 启动器（Custom Spring Boot starters）
 
-## 小结
+在前面的示例中，你可能已经注意到我们使用了由 Spring Boot 官方开发和维护的 **Starter 依赖**。  
+Starter 是 Spring Boot 的核心特性之一，用于简化依赖管理。  
+通过 Starter，你可以快速引入一组常用依赖，无需逐个声明。
 
-（待补充：本章要点总结）
+这种“启动器”机制不仅适用于官方组件，也可以扩展到**自定义代码和配置**。  
+Spring Boot 提供了基础设施，允许你定义自己的 Starter，使其像其他依赖一样被引入和维护。  
+在本书的后续章节中，我们将展示如何创建一个自定义 Starter。
+
+### 1.4.4 自定义自动配置（Custom autoconfiguration）
+
+在本章开头我们提到过，Spring Boot 是一个 **“带主观意见”**（opinionated）的框架。  
+在应用启动时，它会根据项目中存在的依赖与配置，**自动装配（autoconfigure）** 各种组件。  
+
+这种自动装配机制允许 Spring Boot 在初始化和执行阶段根据环境做出默认决策。  
+例如，检测到 Web 依赖时自动配置内嵌 Tomcat，检测到 JPA 时自动配置 Hibernate。
+
+同样地，开发者也可以扩展这一机制来定义自己的自动配置。  
+后续章节中，我们将学习如何创建自定义的自动配置类。
+
+### 1.4.5 故障分析器（Failure analyzers）
+
+Spring Boot 提供了 **FailureAnalyzer** 概念，用于在应用启动失败时生成详细诊断报告。  
+当应用启动出现异常时，Spring Boot 会调用对应的 `FailureAnalyzer`，并输出一份清晰的 **FailureAnalysis** 报告，帮助开发者快速定位问题。
+
+例如，下面是当端口被占用时的分析报告：
+
+> *图 1.4*  端口不可用时的故障分析报告（Failure analyzer diagnostic report）
+![图 1.4](../assets/1-4.png)
+
+你还可以自定义 `FailureAnalyzer` 来处理特定异常。    
+例如，可以结合自定义自动配置机制，为你的业务异常提供详细的错误报告。    
+后续章节会介绍如何编写自定义 `FailureAnalyzer`。
+
+
+### 1.4.6 Spring Boot 监控器（Spring Boot actuator）
+
+**Spring Boot Actuator** 用于监控和管理应用的运行状态。  
+在生产环境中，它常被用于查看健康指标、线程状态、内存使用、依赖版本等运行信息。
+
+通过引入 `spring-boot-starter-actuator` 依赖即可启用：
+
+> 示例 1.12 引入 Actuator 依赖（Spring Boot starter actuator dependency）
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+默认情况下，Spring Boot 暴露 `/actuator` 作为基础端点。
+
+只有 `/health` 和 `/info` 会通过 HTTP 启用，其它端点默认关闭。
+
+访问 `http://localhost:8080/actuator` 时，你会看到如下输出：
+
+> 示例 1.13 Actuator 端点示例（Spring Boot actuator endpoints）
+
+```json
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:8080/actuator",
+      "templated": false
+    },
+    "health-path": {
+      "href": "http://localhost:8080/actuator/health/{*path}",
+      "templated": true
+    },
+    "info": {
+      "href": "http://localhost:8080/actuator/info",
+      "templated": false
+    }
+  }
+}
+```
+
+当你访问 `http://localhost:8080/actuator/health` 时，如果应用运行正常，将返回状态 `UP`。
+
+我们将在第 4 章深入探讨 Spring Boot Actuator 的高级用法。
+
+### 1.4.7 Spring Boot 开发者工具（Spring Boot developer tool）
+
+为提升开发效率，Spring Boot 提供了一套 **开发者工具（DevTools）**。
+
+它可在代码变更时自动重新编译并刷新浏览器，
+
+还内置了一个 `LiveReload` 服务器以自动触发页面更新。
+
+通过引入以下依赖即可启用：
+
+> 示例 1.14 引入开发者工具（Spring Boot developer tools）
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-devtools</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
+这些工具可在开发阶段极大地提升体验，但在生产环境中应禁用。
+
+## 总结（Summary）
+
+Spring Boot 让你能够快速创建独立、可用于生产环境的应用程序，而无需过多关注配置的细节。  
+它通过**自动配置（autoconfiguration）**和**基于 Starter 的依赖管理**机制，承担了繁重的应用初始化和配置工作，使你能够专注于业务逻辑的开发。
+
+在本章中，我们首先概览了 Spring Boot 的主要特性和组成部分。  
+本章探讨的主要内容包括：
+
+- 什么是 Spring Boot 以及它相较于传统 Spring 应用的优势  
+- Spring Boot 的功能及其各个组成部分  
+- 典型的 Spring Boot 项目结构及生成内容  
+- 如何从 Spring Boot 项目创建可执行的 JAR 文件及其内部结构  
+- 如何优雅地关闭正在运行的 Spring Boot 应用  
+- Spring Boot 启动事件及其多种监听方式  
+- 自定义 Starter、自动配置、故障分析器与监控器（Actuator）的概述  
+- Spring Boot 开发者工具（DevTools）的简介及其提升开发效率的作用  
+
+本书的其余部分将聚焦于实战技巧，帮助你解决在使用 Spring Boot 过程中常见的实际问题。  
+你将接触到广泛的主题领域，包括 Spring Boot 应用开发、安全机制、响应式应用开发以及基于云的部署等内容。
+
