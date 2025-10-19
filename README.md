@@ -96,8 +96,7 @@ spring-boot-in-practice/
 ├── docs/                    # VitePress 文档站点
 │   ├── .vitepress/         # VitePress 配置
 │   ├── chapters/           # 各章节学习笔记
-│   ├── appendices/         # 附录
-│   └── meta/               # 翻译规范、术语表等
+│   └── appendices/         # 附录
 ├── samples/                # 按章节组织的代码示例
 │   ├── ch01/              # 第1章示例
 │   ├── ch02/              # 第2章示例
