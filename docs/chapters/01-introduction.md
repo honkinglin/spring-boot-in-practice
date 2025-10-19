@@ -20,7 +20,7 @@ cd samples
 mvn spring-boot:run -pl ch01/web-api
 ```
 
-访问 http://localhost:8080/hello 查看运行效果。
+访问 `http://localhost:8080/hello` 查看运行效果。
 
 ---
 
