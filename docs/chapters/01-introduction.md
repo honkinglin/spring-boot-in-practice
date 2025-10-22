@@ -6,23 +6,9 @@ samples:
     desc: 起步示例（Web API）
 ---
 
-# 第1章 启动 Spring Boot
+# 第 1 章 - 启动 Spring Boot
 
 本章将介绍 Spring Boot 的核心理念、设计哲学和快速入门方法。你将了解 Spring Boot 如何简化 Spring 应用开发，以及如何创建第一个可运行的 Web 应用。
-
-## 配套示例
-
-本章配套示例位于 `samples/ch01/spring-boot-app-demo`，演示了一个最简单的 Spring Boot Web API 应用。
-
-运行示例：
-```bash
-cd samples
-mvn spring-boot:run -pl ch01/spring-boot-app-demo
-```
-
-访问 `http://localhost:8080/hello` 查看运行效果。
-
----
 
 ## 1.1 介绍 Spring Boot（Introducing Spring Boot）
 
