@@ -1,5 +1,0 @@
-server:
-  port: 8080
-spring:
-  application:
-    name: ch01-web-api

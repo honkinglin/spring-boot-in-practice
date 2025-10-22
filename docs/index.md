@@ -65,5 +65,5 @@ pnpm run docs:dev
 
 # 运行第1章示例
 cd samples
-mvn spring-boot:run -pl ch01/web-api
+mvn spring-boot:run -pl ch01/spring-boot-app-demo
 ```

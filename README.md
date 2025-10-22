@@ -50,8 +50,8 @@ pnpm run docs:build
 # 进入 samples 目录
 cd samples
 
-# 运行第1章示例（Web API）
-mvn spring-boot:run -pl ch01/web-api
+# 运行第1章示例
+mvn spring-boot:run -pl ch01/spring-boot-app-demo
 
 # 构建所有模块
 mvn clean install

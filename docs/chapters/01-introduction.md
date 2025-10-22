@@ -2,7 +2,7 @@
 title: 第1章 启动 Spring Boot
 original: "Chapter 01: Booting Spring Boot"
 samples:
-  - path: /samples/ch01/web-api
+  - path: /samples/ch01/spring-boot-app-demo
     desc: 起步示例（Web API）
 ---
 
@@ -12,12 +12,12 @@ samples:
 
 ## 配套示例
 
-本章配套示例位于 `samples/ch01/web-api`，演示了一个最简单的 Spring Boot Web API 应用。
+本章配套示例位于 `samples/ch01/spring-boot-app-demo`，演示了一个最简单的 Spring Boot Web API 应用。
 
 运行示例：
 ```bash
 cd samples
-mvn spring-boot:run -pl ch01/web-api
+mvn spring-boot:run -pl ch01/spring-boot-app-demo
 ```
 
 访问 `http://localhost:8080/hello` 查看运行效果。

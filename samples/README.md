@@ -15,4 +15,4 @@
 - appendix01 — Generating & Building（生成与构建）
 - appendix02 — Spring MVC & Thymeleaf（模板引擎）
 
-各章节下可包含一个或多个子模块。如 ch01/web-api。
+各章节下可包含一个或多个子模块。如 ch01/spring-boot-app-demo。

@@ -8,7 +8,7 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>ch01/web-api</module>
+    <module>ch01/spring-boot-app-demo</module>
   </modules>
 
   <properties>
