@@ -1290,4 +1290,180 @@ Log4j2 是 Java 生态中最常用、最稳定的日志框架之一，具有丰�
 * 修改 `SizeBasedTriggeringPolicy` 的阈值，观察日志滚动行为；
 * 在 Java 代码中生成大量日志，以测试文件切分与历史日志保留策略。
 
+## 2.5 使用 Bean Validation 验证用户数据（Validate user data using Bean Validation）
+
+在实际开发中，经常需要验证用户输入的数据，以确保它满足业务规则。   
+例如，可能需要验证某个字段不能为空，或者检查字段值的最小和最大长度。   
+你也可能需要对用户数据实现自定义验证规则，例如自定义密码强度校验等。  
+
+[**Bean Validation**](https://beanvalidation.org/)是 Java 生态中事实上的标准验证框架。  
+该规范允许通过注解（annotation）定义验证规则，并支持以可扩展的方式自定义验证逻辑。   
+[**Hibernate Validator**](http://hibernate.org/validator) 是 Bean Validation 规范的参考实现。
+
+Spring Boot 与 Bean Validation 无缝集成。  
+只需引入 `spring-boot-starter-validation` 依赖，即可在应用中使用 Hibernate Validator。
+
+### 2.5.1 技巧：使用内置 Bean Validation 注解验证业务实体
+*(Using built-in Bean Validation annotations to validate business entity in a Spring Boot application)*
+
+在本技巧中，我们将演示如何在 Spring Boot 中使用 Bean Validation 验证业务实体。
+
+#### 问题（Problem）
+
+你希望在 Spring Boot 应用中，使用 Java Bean Validation 框架来验证业务实体的数据有效性。
+
+#### 解决方案（Solution）
+
+我们通过一个简单示例来展示 Bean Validation 的用法。
+
+> 源代码
+> 示例项目可在 [这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/bean-validation) 获取。
+
+
+首先，在 Maven 项目中添加 `spring-boot-starter-validation` 依赖：
+
+```xml
+<!-- Listing 2.29 添加 Spring Boot 验证依赖 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
+
+
+### 定义实体类
+
+新建一个名为 `Course` 的实体类，包含以下字段：`id`, `name`, `category`, `rating`, `description`。  
+我们将对 `rating` 字段添加验证规则。
+
+```java
+// Listing 2.30 Course 实体类
+package com.manning.sbip.ch02.model;
+
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+
+public class Course {
+
+    private long id;
+    private String name;
+    private String category;
+
+    // 验证 rating 字段的取值范围：1 - 5
+    @Min(value = 1, message = "A course should have a minimum of 1 rating")
+    @Max(value = 5, message = "A course should have a maximum of 5 rating")
+    private int rating;
+
+    private String description;
+
+    // 构造函数、Getter 和 Setter 省略
+}
+```
+
+这里定义了两个验证约束：
+
+* `@Min(1)`：最小评分为 1；
+* `@Max(5)`：最大评分为 5。
+  若输入的值超出范围，将抛出对应的错误消息。
+
+
+### 在应用中执行验证
+
+接下来，我们在主类中添加验证逻辑，使用 `Validator` 对 `Course` 实例执行校验。
+
+```java
+// Listing 2.31 Spring Boot 主类（含 CommandLineRunner 实现）
+
+package com.manning.sbip.ch02;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ConstraintViolation;
+import java.util.Set;
+
+@SpringBootApplication
+public class CourseTrackerApplication implements CommandLineRunner {
+
+    private static final Logger logger =
+        LoggerFactory.getLogger(CourseTrackerApplication.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(CourseTrackerApplication.class, args);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        // 创建 Course 实例并设置 rating 为 0（低于最小值 1）
+        Course course = new Course();
+        course.setId(1);
+        course.setRating(0);
+
+        // 获取 Validator 实例
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+
+        // 执行验证
+        Set<ConstraintViolation<Course>> violations = validator.validate(course);
+
+        // 输出验证结果
+        violations.forEach(courseConstraintViolation ->
+            logger.error("A constraint violation has occurred. Violation details: [{}].",
+                courseConstraintViolation));
+    }
+}
+```
+
+代码说明：
+
+* 创建 `Course` 对象并设置 `rating = 0`，违反最小值约束；
+* 获取 `Validator` 实例；
+* 调用 `validator.validate(course)` 执行校验；
+* 对每个 `ConstraintViolation` 打印错误日志。
+
+
+运行应用后，Spring Boot 启动完成后会自动执行 `CommandLineRunner`，
+控制台将输出约束违规的详细信息，例如：
+
+![图 2-4](../assets/2-4.png)
+
+这表示 `@Min(1)` 校验被触发，系统正确识别到字段值不合法。
+
+### 讨论（Discussion）
+
+Bean Validation 允许使用注解的方式对应用中的字段进行验证。  
+它还支持通过属性配置自定义错误消息。
+
+以下表格列出了 Hibernate Validator 中一些常用的注解：
+
+| 注解                         | 作用说明                               |
+| -------------------------- | ---------------------------------- |
+| `@NotBlank`                | 检查字符串是否非空（仅适用于 `CharSequence` 类型）。 |
+| `@NotEmpty`                | 检查集合、数组、字符串等是否为空。                  |
+| `@NotNull`                 | 检查字段值是否为非 null。                    |
+| `@Min(value=)`             | 检查字段值是否大于或等于指定最小值。                 |
+| `@Max(value=)`             | 检查字段值是否小于或等于指定最大值。                 |
+| `@Pattern(regex=, flags=)` | 检查字符串是否符合正则表达式。                    |
+| `@Size(min=, max=)`        | 检查集合或字符串长度是否在指定范围内。                |
+| `@Email`                   | 检查字符串是否为合法的电子邮箱地址。                 |
+
+> Hibernate Validator 是 Bean Validation 的参考实现，
+> 并且被 Spring Boot 默认用于执行 Bean 验证。
+> 更多注解和使用示例可参考：
+> [https://hibernate.org/validator](https://hibernate.org/validator)
+> 或
+> [section-builtin-constraints](https://docs.hibernate.org/stable/validator/reference/en-US/html_single/#section-builtin-constraints)
+
+
+在大多数场景下，内置注解已经足够使用。  
+但有时可能需要自定义验证逻辑，例如：
+
+* 检查用户输入是否为合法 IP 地址；
+* 检查密码是否符合复杂度要求。
+
+在下一节中，我们将学习如何基于 Bean Validation 框架编写**自定义约束验证器（custom constraint validator）**。
 
