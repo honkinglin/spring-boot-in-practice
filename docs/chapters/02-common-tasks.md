@@ -453,5 +453,50 @@ export SERVER_PORT=9090
 
 #### 深入阅读（Further Reading）
 
-如果你希望更深入了解 Spring Boot 配置加载机制与优先级规则，
-可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config)
+如果你希望更深入了解 Spring Boot 配置加载机制与优先级规则，可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config)
+
+## 2.2 使用 @ConfigurationProperties 创建自定义配置（Creating Custom Properties with @ConfigurationProperties）
+
+在上一节中，我们学习了多种配置 Spring Boot 应用属性的方法。  
+这些配置大体可以分为两类：
+
+- **Spring Boot 内置属性（built-in properties）**  
+- **自定义属性（custom properties）**
+
+Spring Boot 提供了大量内置属性，用于配置框架的各种功能。  
+最常见的示例是 `server.port`，它定义了应用启动时使用的 HTTP 端口。  
+你可以在 [Spring Boot 官方文档](https://docs.spring.io/spring-boot/index.html) 中找到完整的内置属性列表
+
+### 定义自定义属性（Defining Custom Properties）
+
+在某些情况下，你的应用需要配置与业务逻辑相关的属性。  
+根据应用的复杂度和功能，你可能需要在配置文件中定义自定义属性。  
+例如：
+
+- 定义一个外部 REST 服务的访问地址；  
+- 定义一个布尔值，用于启用或禁用某个功能。
+
+Spring Boot 允许你在应用的配置文件中定义任意数量的属性，并在运行时自动加载和绑定这些配置。  
+
+在上一节中，我们介绍过可以通过 `Environment` 对象获取属性，或使用 `@Value` 注解将属性注入到类中。  
+这种方式简单有效，但也存在一些不足。
+
+### 局限性（Limitations）
+
+虽然直接通过 `@Value` 或 `Environment` 访问配置非常方便，但仍有以下缺点：
+
+- **缺乏类型安全（Type-safety）**  
+  通过属性文件配置的值通常以字符串形式加载，缺乏类型约束。  
+  例如，当配置项是 URL 或电子邮件地址时，Spring 无法在编译或启动阶段验证其格式是否合法。  
+
+- **访问繁琐**  
+  需要逐个使用 `@Value` 注解或通过 `Environment` 实例获取属性值，这会导致代码分散且难以维护。
+
+### 引入强类型配置（Strongly-Typed Configuration）
+
+为了解决上述问题，Spring Boot 提供了另一种更优雅的方式：  
+使用 `@ConfigurationProperties` 注解定义**强类型 Bean 配置类**。  
+
+这种方式不仅可以在编译期保证类型安全（type-safety），还可以在应用启动时自动验证配置项是否合法。  
+我们将在下一节详细介绍这种技术的使用方法。
+
