@@ -354,3 +354,104 @@ Spring Boot 加载配置文件的顺序如下：
 
 这种分层加载机制使得配置既可以内置于应用中，又能根据部署环境灵活覆盖。
 
+### 2.1.4 操作系统环境变量（OS Environment Variable）
+
+> 💡 **源码地址**  
+> 本节对应示例项目可以[点击这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/os-env-variables)查看：  
+
+你可以将应用配置声明为系统环境变量，并在配置文件中通过变量名引用它。  
+下面我们通过一个示例来演示如何实现这一点。  
+
+假设在 `application.properties` 文件中定义了一个自定义属性 `app.timeout`，内容如下：
+
+```properties
+app.timeout=${APP_TIMEOUT}
+````
+
+这里的 `APP_TIMEOUT` 是一个操作系统环境变量，我们将在操作系统中为它赋值。  
+在 Windows 中，你可以通过以下命令设置环境变量：
+
+```bash
+set APP_TIMEOUT=30
+```
+
+在 Linux 或 macOS 终端中，你可以使用：
+
+```bash
+export APP_TIMEOUT=30
+```
+
+需要注意的是，通过这种方式设置的环境变量**只在当前命令行会话中有效**。  
+因此，运行 Spring Boot 应用时应在同一终端窗口执行。
+
+#### 在应用中访问环境变量（Accessing Environment Variables）
+
+我们可以在应用代码中读取该环境变量。  
+下面的示例展示了如何访问 `app.timeout` 属性并输出其值：
+
+```java
+package com.manning.sbip.ch02;
+
+// imports
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.Environment;
+
+@SpringBootApplication
+public class SpringBootAppDemoApplication {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(SpringBootAppDemoApplication.class);
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context =
+                SpringApplication.run(SpringBootAppDemoApplication.class, args);
+
+        Environment env = context.getBean(Environment.class);
+        log.info("Configured application timeout value: " + env.getProperty("app.timeout"));
+    }
+}
+```
+
+在上述代码中，我们从 `ConfigurableApplicationContext` 获取 `Environment` Bean，并使用 `env.getProperty("app.timeout")` 读取配置值。  
+Spring Boot 会在运行时自动解析 `${APP_TIMEOUT}` 占位符并替换为真实值。
+
+
+#### 默认值与覆盖机制（Default Values and Overrides）
+
+在实际开发中，通常会在 `application.properties` 文件中提供默认配置，并在不同环境中通过环境变量覆盖这些默认值。
+
+例如：
+
+```properties
+server.port=8080
+```
+
+你可以在环境变量中设置：
+
+```bash
+export SERVER_PORT=9090
+```
+
+此时应用启动端口会被覆盖为 `9090`。
+
+#### 配置属性加载优先级（Order of Property Resolution）
+
+当同一个属性在多个位置被定义时，Spring Boot 会按照一定顺序加载配置。  
+优先级较高的配置会覆盖较低优先级的配置。顺序如下：
+
+1. `SpringApplication`（通过 `setDefaultProperties()` 设置的属性）
+2. `@PropertySource` 注解加载的属性
+3. 配置文件（`application.properties` 或 `.yml`）
+4. 操作系统环境变量（OS Environment Variable）
+5. 命令行参数（Command Line Arguments）
+
+因此，通过命令行参数指定的属性拥有最高优先级。
+
+#### 深入阅读（Further Reading）
+
+如果你希望更深入了解 Spring Boot 配置加载机制与优先级规则，
+可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config)
