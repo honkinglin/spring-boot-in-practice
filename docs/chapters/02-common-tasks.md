@@ -714,8 +714,7 @@ public AppProperties(String name, String ip, @DefaultValue("8080") int port, Sec
 
 更多关于 `@ConfigurationProperties` 的信息可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.typesafe-configuration-properties)
 
-## 2.3 在 Spring Boot 应用启动时执行代码  
-*(Executing Code on Spring Boot Application Startup)*
+## 2.3 在 Spring Boot 应用启动时执行代码 (Executing Code on Spring Boot Application Startup)
 
 在某些情况下，你可能需要在 Spring Boot 应用启动时执行一些自定义逻辑。  
 例如：
@@ -913,4 +912,184 @@ public CommandLineRunner printCourses(CourseRepository courseRepository) {
 
 ✅ 前两种方式适合简单逻辑；   
 ✅ 第三种方式适合模块化管理启动逻辑，让主类保持简洁。
+
+## 2.4 自定义 Spring Boot 应用中的日志（Customizing logging in a Spring Boot application）
+
+日志（Logging）是应用程序中非常重要的组成部分。日志记录了应用运行过程中的关键事件，并为我们提供了分析应用行为的重要信息。  
+根据不同的日志配置，日志可以被输出到不同的媒介中，比如控制台、文件或数据库。但在实际开发中，最常用的仍然是**控制台日志**和**基于文件的日志**。
+
+在本节中，你将首先了解和探索 Spring Boot 的默认日志机制。接着，我们会学习如何在 Spring Boot 应用中使用其他日志框架来自定义日志输出。
+
+### 2.4.1 技巧：理解并自定义 Spring Boot 默认日志
+*(Technique: Understanding and customizing default Spring Boot logging in a Spring Boot application)*
+
+在本技巧中，我们将讨论 Spring Boot 默认的日志机制以及如何对其进行自定义配置。
+
+#### 问题（Problem）
+
+你希望了解并自定义 Spring Boot 应用中的默认日志机制。
+
+#### 解决方案（Solution）
+
+Spring Boot 默认为所有应用提供了**控制台日志功能**。  
+该日志会在应用启动时、或在应用执行其他操作时，将日志语句输出到命令行终端中。
+
+> 💡 **源代码**
+> 本节相关示例代码可在 [这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/spring-boot-default-logging/spring-boot-app-final) 获取。
+
+
+### Spring Boot 的日志框架
+
+Spring Boot 内部使用 [Apache Commons Logging](https://commons.apache.org/proper/commons-logging/) 作为日志门面。  
+它同时支持其他流行的日志实现框架，例如：
+
+* **Logback**（[http://logback.qos.ch/](http://logback.qos.ch/)）
+* **Log4j2**（[https://logging.apache.org/log4j/2.x/](https://logging.apache.org/log4j/2.x/)）
+* **java.util.logging**
+
+当你在项目中使用任意 Spring Boot Starter 依赖时，默认情况下，Spring Boot 会自动使用 **Logback** 作为日志实现框架。  
+这是因为 `spring-boot-starter-logging` 会被自动引入，并包含 Logback 的相关依赖。
+
+以下示例展示了 Spring Boot Starter 中的日志依赖关系：
+
+```xml
+<!-- Listing 2.22 Spring Boot starter logging dependencies -->
+<dependencies>
+    <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>log4j-over-slf4j</artifactId>
+    </dependency>
+</dependencies>
+```
+
+### 启动日志
+
+完成项目配置后，你可以通过 IDE 启动应用，或使用命令行执行：
+
+```bash
+mvn spring-boot:run
+```
+
+此时，你将在控制台中看到类似下方的启动日志：
+
+![图 2-3](../assets/2-3.png)
+
+随后会显示各个组件的启动信息，包括时间、日志级别、线程名、类名等内容。
+
+### 日志语句结构
+
+控制台日志由多个部分组成。下表列出了常见的日志语句元素：
+
+* **Date and time（日期和时间）** — 记录日志的时间戳
+* **Log level（日志级别）** — 可能的取值包括 `FATAL`、`ERROR`、`WARN`、`INFO`、`DEBUG`、`TRACE`
+
+  * `FATAL` / `ERROR`：表示严重错误
+  * `INFO` / `DEBUG`：常规信息，可忽略
+* **Process ID（进程 ID）** — 当前应用进程号
+* **Separator（分隔符）** — 例如 `---`，表示日志正文开始
+* **Thread name（线程名）** — 记录日志的线程名称（异步时可自定义）
+* **Logger name（日志类名）** — 缩写的源类名
+* **Message（日志内容）** — 实际输出的信息
+
+
+### 默认日志格式
+
+下面展示了 Spring Boot 默认使用的日志格式：
+
+```properties
+# Listing 2.23 Default logging pattern
+%clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}){faint}
+%clr(${LOG_LEVEL_PATTERN:%5p}) %clr(${PID:- }){magenta}
+%clr(---){faint} %clr([%15.15t]){faint}
+%clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}
+```
+
+`%clr` 是用于设置颜色的转换词（conversion word），由类
+`org.springframework.boot.logging.logback.ColorConverter` 实现。
+例如，`%clr(${PID:- }){magenta}` 会以洋红色显示进程 ID。
+
+
+### 自定义控制台日志格式
+
+你可以通过在 `application.properties` 文件中配置 `logging.pattern.console` 属性来自定义日志格式：
+
+```properties
+# Listing 2.24 Custom logging pattern
+logging.pattern.console=%clr(%d{dd-MM-YYYY HH:mm:ss.SSS}){yellow} \
+%clr(${PID:- }){green} %magenta([%thread]) %highlight([%-5level]) \
+%clr(%-40.40logger{39}){cyan} %msg%n
+```
+
+重启应用后，你将在控制台看到不同的日志格式输出。
+
+::: tip 
+**Appender 与 Logger 的概念**
+
+在日志系统中，有两个常见术语需要了解：
+
+* **Logger**：日志记录器，用于生成日志。你可以定义多个 logger，并设置不同的日志级别。
+* **Appender**：日志输出器，决定日志输出的位置和格式。例如：
+
+  * 控制台 appender：输出到终端；
+  * 文件 appender：写入文件；
+  * RollingFileAppender：按时间或文件大小滚动；
+  * SMTP appender：发送日志到邮箱。
+
+:::
+
+### 文件日志配置
+
+默认情况下，Spring Boot 会输出 `INFO`、`WARN`、`ERROR` 级别的日志。   
+如果你希望启用 `DEBUG` 或 `TRACE` 级别，可以在 `application.properties` 中添加：
+
+```properties
+debug=true
+# 或者
+trace=true
+```
+
+在生产环境中，我们通常需要将日志写入文件，便于后续分析。  
+配置方式如下：
+
+```properties
+# Listing 2.25 Updated application.properties file
+logging.pattern.console=%clr(%d{dd-MM-YYYY HH:mm:ss.SSS}){yellow} \
+%clr(${PID:- }){green} %magenta([%thread]) %highlight([%-5level]) \
+%clr(%-40.40logger{39}){cyan} %msg%n
+
+logging.file.path=C:\\sbip\\logs
+```
+
+这样，Spring Boot 会在 `C:\sbip\logs` 目录下生成 `spring.log` 文件。
+
+你也可以使用 `logging.file.name=application.log` 明确指定日志文件名。
+
+
+### 日志文件滚动策略
+
+Spring Boot 会在日志文件大小达到 **10MB** 或日志时间超过 **7天** 时进行日志滚动。
+可以通过以下参数进行自定义：
+
+```properties
+logging.logback.rollingpolicy.max-file-size=10MB
+logging.logback.rollingpolicy.max-history=7
+```
+
+
+### 讨论（Discussion）
+
+通过本节的技巧，你已经学习了 Spring Boot 的默认日志配置，并掌握了如何使用内置参数配置和管理基于文件的日志。  
+更多内容可以参考 [Spring Boot 官方文档](https://docs.spring.io/spring-boot/redirect.html?page=spring-boot-features#boot-features-logging)
+
+虽然 Logback 对于大多数项目已经足够，但如果你更熟悉其他日志框架（例如 **Log4j2**），或者你的组织更倾向于使用特定框架，也可以替换默认配置。  
+接下来，我们将学习如何在 Spring Boot 应用中配置 **Log4j2** 日志框架。
+
 
