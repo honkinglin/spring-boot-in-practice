@@ -172,4 +172,185 @@ public class DbConfiguration {
 
 :::
 
+### 2.1.3 配置数据文件（Config Data File）
+
+> 💡 **源码地址**  
+> 本节对应示例项目可以[点击这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/config-data-file)查看：  
+
+Spring Boot 允许你在 `application.properties` 或 `application.yml` 文件中定义应用程序配置属性。    
+这是 Spring Boot 应用中最常见、最推荐的配置方式。  
+
+默认情况下，Spring Initializr 生成的 Spring Boot 项目会包含一个空的 `application.properties` 文件。  
+如果你更喜欢使用 YAML 格式，也可以在项目中创建 `application.yml` 文件来替代。  
+无论是 `.properties` 还是 `.yml` 文件，Spring Boot 都会将其中的配置加载到 `Environment` 实例中，  
+并可以在应用中通过 `@Value` 注解直接引用这些配置。
+
+::: tip
+
+**Properties 或 YAML 文件示例**
+
+Spring Boot 支持使用 `.properties` 或 `.yml` 文件进行配置。  
+`.properties` 文件采用键值对形式，通过 `=` 分隔键和值，例如：
+
+```properties
+server.port=8081
+spring.datasource.username=sa
+spring.datasource.password=password
+````
+
+上述配置在 `.yml` 文件中的等价形式如下：
+
+```yaml
+server:
+  port: 8081
+spring:
+  datasource:
+    user: sa
+    password: password
+```
+
+无论选择哪种格式，Spring Boot 都能正确识别（除少数语法差异外）。  
+部分开发者更偏好使用 YAML，因为它支持层级结构、语法更简洁，并且能方便表示列表或映射等复杂数据结构。
+
+不过，如果你选择 YAML 文件，需要特别注意 **缩进与空格**，一个额外的空格或错误的缩进都会导致解析失败。  
+相对而言，`.properties` 文件更易于按名称快速定位属性。
+
+:::
+
+
+#### 自定义配置文件名
+
+如果你希望使用不同于 `application.properties`（或 `.yml`）的配置文件名，可以通过 `spring.config.name` 属性轻松实现。
+
+假设我们在 `src/main/resources` 目录下新建一个名为 `sbip.yml` 的文件，其中包含以下配置：
+
+```yaml
+server:
+  port: 8081
+```
+
+你可以使用 Maven 构建项目：
+
+```bash
+mvn package
+```
+
+生成的可执行 JAR 文件中包含了应用组件。构建完成后，可通过以下命令运行：
+
+```bash
+java -jar config-data-file-0.0.1-SNAPSHOT.jar
+```
+
+> 默认情况下，Spring Boot 使用端口 `8080` 启动。
+> 若要使用自定义配置文件启动（如 `sbip.yml`），可以执行以下命令：
+
+```bash
+java -jar config-data-file-0.0.1-SNAPSHOT.jar --spring.config.name=sbip
+```
+
+此时，Spring Boot 会读取 `sbip.yml` 文件，并在端口 `8081` 启动应用。
+
+
+#### 配置文件的默认加载位置
+
+Spring Boot 默认会在以下位置查找 `application.properties` 或 `application.yml` 文件：
+
+1. 类路径根目录（`classpath root`）
+2. 类路径下的 `/config` 目录
+3. 当前工作目录（`current directory`）
+4. 当前目录下的 `/config` 子目录
+5. `/config` 目录的子目录
+
+此外，你还可以通过 `spring.config.location` 属性显式指定配置文件路径，例如：
+
+```bash
+java -jar target/config-data-file-0.0.1-SNAPSHOT.jar \
+  --spring.config.location=C:\sbip\repo\ch02\config-data-file\data\sbip.yml
+```
+
+> 上述命令会在 HTTP 端口 `8081` 启动应用，并从指定路径加载配置文件。
+
+
+#### 可选配置文件（Optional Configuration）
+
+从 Spring Boot **2.4.0** 开始，如果无法找到指定的配置文件，程序会抛出错误。
+若希望文件是“可选”的，可在路径前添加 `optional:` 前缀：
+
+```bash
+java -jar target/config-data-file-0.0.1-SNAPSHOT.jar \
+  --spring.config.location=optional:C:\sbip\repo\ch02\config-data-file\data\sbip1.yml
+```
+
+这样即使文件不存在，应用仍然可以正常启动。
+
+::: tip
+
+**关于 spring.config.name 与 spring.config.location**
+
+Spring Boot 在**应用启动的早期阶段**就会加载 `spring.config.name` 和 `spring.config.location`，
+因此这两个配置不能放在 `application.properties` 或 `application.yml` 中。
+
+若需要设置它们，可以使用以下方式：
+
+* 通过 `SpringApplication.setDefaultProperties()` 方法；
+* 通过系统环境变量；
+* 通过命令行参数。
+
+:::
+
+::: tip
+
+**命令行参数（Command Line Arguments）**
+
+Spring Boot 支持通过命令行传入配置参数。
+例如，我们在执行 JAR 文件时可以这样指定：
+
+```bash
+java -jar config-data-file-0.0.1-SNAPSHOT.jar \
+  --spring.config.name=sbip \
+  --spring.config.location=file:data/sbip.yml
+```
+
+这与前面介绍的方式效果相同，只是配置以命令行参数形式传递。
+
+:::
+
+#### 基于 Profile 的配置文件（Profiles for Configuration）
+
+Spring Boot 允许你为不同的运行环境定义独立的配置文件。
+例如：
+
+* `application-dev.properties`（开发环境）
+* `application-test.properties`（测试环境）
+* `application-prod.properties`（生产环境）
+
+你可以在主配置文件中通过属性 `spring.profiles.active` 激活特定 Profile：
+
+```properties
+spring.profiles.active=dev
+```
+
+当激活 `dev` 时，应用会自动加载 `application-dev.properties` 文件。  
+如果切换为 `test`，则会加载 `application-test.properties` 文件。
+
+示例：
+
+```properties
+# application-dev.properties
+server.port=9090
+
+# application-test.properties
+server.port=9091
+```
+
+#### 配置文件的加载顺序
+
+Spring Boot 加载配置文件的顺序如下：
+
+1. 打包在应用 JAR 内的默认 `application.properties` 或 `.yml` 文件
+2. 打包在应用 JAR 内的 Profile 专属配置文件（如 `application-dev.properties`）
+3. 位于 JAR 外部的默认配置文件
+4. 位于 JAR 外部的 Profile 专属配置文件
+
+这种分层加载机制使得配置既可以内置于应用中，又能根据部署环境灵活覆盖。
 
