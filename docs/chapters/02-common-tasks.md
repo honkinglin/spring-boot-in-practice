@@ -500,3 +500,218 @@ Spring Boot 允许你在应用的配置文件中定义任意数量的属性，�
 这种方式不仅可以在编译期保证类型安全（type-safety），还可以在应用启动时自动验证配置项是否合法。  
 我们将在下一节详细介绍这种技术的使用方法。
 
+### 2.2.1 技巧：在 Spring Boot 应用中使用 @ConfigurationProperties 定义自定义配置  
+*(Technique: Defining Custom Properties with @ConfigurationProperties in a Spring Boot Application)*
+
+**问题（Problem）**   
+你需要在 Spring Boot 应用中定义可进行类型验证（type-safe）且可校验（validated）的自定义配置属性。
+
+**解决方案（Solution）**  
+> 💡 **源码地址**  
+> 本节对应的 Spring Boot 示例项目可以[点击这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/configuration-properties)查看  
+
+在本节中，我们将介绍如何使用 `@ConfigurationProperties` 在 Spring Boot 应用中定义自定义属性，并在代码中使用它们，而无需依赖 `@Value` 注解或 `Environment` 实例。  
+
+#### 添加配置依赖（Adding Configuration Processor）
+
+要在 IDE 中获得属性自动补全（autocompletion）和文档提示功能，需要在 `pom.xml` 中添加如下依赖：
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+    <optional>true</optional>
+</dependency>
+````
+
+该依赖会为所有带有 `@ConfigurationProperties` 注解的类生成元数据（metadata），
+IDE（如 IntelliJ IDEA 或 Eclipse）即可根据这些元数据提供自动提示。
+
+
+### 定义自定义属性（Defining Custom Properties）
+
+在 `application.properties` 文件中添加如下自定义属性：
+
+```properties
+app.sbip.ct.name=CourseTracker
+app.sbip.ct.ip=127.0.0.1
+app.sbip.ct.port=9090
+app.sbip.ct.security.enabled=true
+app.sbip.ct.security.token=asdfE998hhyqtghtYTggghg9908jjh7ttr
+app.sbip.ct.security.roles=USER,ADMIN
+```
+
+这些属性并非 Spring Boot 内置属性，而是针对我们应用的特定配置项。
+
+
+#### 创建配置类（Creating Configuration Class）
+
+接下来，我们创建一个用于映射这些配置项的 Java 类 `AppProperties`：
+
+```java
+package com.manning.sbip.ch02.configurationproperties;
+
+import java.util.List;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.ConstructorBinding;
+
+@ConstructorBinding
+@ConfigurationProperties("app.sbip.ct")
+public class AppProperties {
+
+    private final String name;      // Application Name
+    private final String ip;        // Application IP
+    private final int port;         // Application Port
+    private final Security security; // Security Configuration
+
+    public AppProperties(String name, String ip, int port, Security security) {
+        this.name = name;
+        this.ip = ip;
+        this.port = port;
+        this.security = security;
+    }
+
+    public String getName() { return name; }
+    public String getIp() { return ip; }
+    public int getPort() { return port; }
+    public Security getSecurity() { return security; }
+
+    @Override
+    public String toString() {
+        return "AppProperties{" +
+                "name='" + name + '\'' +
+                ", ip='" + ip + '\'' +
+                ", port=" + port +
+                ", security=" + security +
+                '}';
+    }
+
+    // 嵌套类：安全配置
+    public static class Security {
+        private final boolean enabled;
+        private final String token;
+        private final List<String> roles;
+
+        public Security(boolean enabled, String token, List<String> roles) {
+            this.enabled = enabled;
+            this.token = token;
+            this.roles = roles;
+        }
+
+        public boolean isEnabled() { return enabled; }
+        public String getToken() { return token; }
+        public List<String> getRoles() { return roles; }
+
+        @Override
+        public String toString() {
+            return "Security{" +
+                    "enabled=" + enabled +
+                    ", token='" + token + '\'' +
+                    ", roles=" + roles +
+                    '}';
+        }
+    }
+}
+```
+
+#### 说明（Explanation）
+
+* 该类通过 `@ConfigurationProperties("app.sbip.ct")` 指定属性前缀；
+* 使用 `@ConstructorBinding` 表示通过构造函数注入属性（即不可变绑定方式）；
+* 内部静态类 `Security` 对应配置项 `app.sbip.ct.security.*`，表示嵌套结构属性；
+* 该设计具有良好的**层次结构**和**类型安全性**。
+
+
+#### 定义服务类（Defining a Service Class）
+
+创建一个服务类 `AppService`，用于注入并使用 `AppProperties`：
+
+```java
+package com.manning.sbip.ch02;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AppService {
+
+    private final AppProperties appProperties;
+
+    @Autowired
+    public AppService(AppProperties appProperties) {
+        this.appProperties = appProperties;
+    }
+
+    public AppProperties getAppProperties() {
+        return this.appProperties;
+    }
+}
+```
+
+该类使用 `@Service` 注解标记，Spring Boot 会自动扫描并注册。
+通过构造函数注入 `AppProperties` 实例，以便在服务中访问配置属性。
+
+
+#### 启动类中启用配置（Enabling Configuration in the Application Class）
+
+接下来，在应用主类中使用 `@EnableConfigurationProperties` 启用该配置类：
+
+```java
+package com.manning.sbip.ch02;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ConfigurableApplicationContext;
+
+@SpringBootApplication
+@EnableConfigurationProperties(AppProperties.class)
+public class SpringBootAppDemoApplication {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(SpringBootAppDemoApplication.class);
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context =
+                SpringApplication.run(SpringBootAppDemoApplication.class, args);
+
+        AppService appService = context.getBean(AppService.class);
+        log.info(appService.getAppProperties().toString());
+    }
+}
+```
+
+* `@EnableConfigurationProperties(AppProperties.class)` 用于将带有 `@ConfigurationProperties` 的类注册到 Spring 容器中。
+* 启动后，`application.properties` 文件中的配置会被读取、校验，并自动绑定到 `AppProperties` 实例上。
+
+如果项目中有多个配置类，也可以使用 `@ConfigurationPropertiesScan` 扫描整个包路径，而无需单独指定类名。
+
+
+#### 讨论（Discussion）
+
+`@ConfigurationProperties` 提供了一种结构化且类型安全的方式来加载配置属性。
+它支持将配置分组到不同的类别中，从而提升项目的可维护性。
+
+* `@ConfigurationProperties("app.sbip.ct")`：指定配置前缀；
+* 支持通过构造函数注入（使用 `@ConstructorBinding`）或 Setter 方法绑定；
+* 如果类只有一个构造函数，可直接在类级别使用 `@ConstructorBinding`。
+
+当你需要默认值时，可以使用 `@DefaultValue` 注解。
+例如：
+
+```java
+public AppProperties(String name, String ip, @DefaultValue("8080") int port, Security security) {
+    this.name = name;
+    this.ip = ip;
+    this.port = port;
+    this.security = security;
+}
+```
+
+在此示例中，如果未配置 `app.sbip.ct.port`，则默认使用端口 `8080`。
+
+更多关于 `@ConfigurationProperties` 的信息可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.typesafe-configuration-properties)
+
+
