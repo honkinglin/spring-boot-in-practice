@@ -1092,4 +1092,202 @@ logging.logback.rollingpolicy.max-history=7
 虽然 Logback 对于大多数项目已经足够，但如果你更熟悉其他日志框架（例如 **Log4j2**），或者你的组织更倾向于使用特定框架，也可以替换默认配置。  
 接下来，我们将学习如何在 Spring Boot 应用中配置 **Log4j2** 日志框架。
 
+### 2.4.2 使用 Log4j2 配置 Spring Boot 应用日志
+*(Using Log4j2 to configure logging in a Spring Boot application)*
+
+在本技巧中，我们将演示如何在 Spring Boot 应用中使用 Log4j2 作为日志框架。
+
+#### 问题（Problem）
+
+你需要在 Spring Boot 应用中配置 Log4j2 作为日志框架。
+
+#### 解决方案（Solution）
+
+在 Spring Boot 中使用 Log4j2 十分简单。
+首先，需要排除默认的 `spring-boot-starter-logging` 依赖，并在构建文件（例如 `pom.xml`）中引入 `spring-boot-starter-log4j2` 依赖。
+随后，可以通过以下任意格式提供 Log4j2 配置：
+
+* `application.properties`
+* `XML`
+* `YAML`
+* `JSON`
+
+在本技巧中，我们将使用 **XML** 来定义日志配置。
+
+> 源代码
+> 本节示例项目可在 [这里](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/spring-boot-logging-with-log4j2/spring-boot-app-final) 获取。
+
+
+如果你延续了上一节的 Spring Boot 项目，需要执行以下两个额外步骤来启用 Log4j2 日志配置：
+
+1. 删除 `application.properties` 文件中所有以 `logging` 开头的属性；
+2. 从 `spring-boot-starter-web` 依赖中排除 `spring-boot-starter-logging`，并添加 `spring-boot-starter-log4j2` 依赖。
+
+示例如下：
+
+```xml
+<!-- Listing 2.26 添加 Log4j2 starter 依赖并排除默认的 starter logging -->
+<dependencies>
+    <!-- Web Starter，但排除默认的 Logback 日志依赖 -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+        <exclusions>
+            <exclusion>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-logging</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <!-- 引入 Log4j2 Starter 依赖 -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-log4j2</artifactId>
+    </dependency>
+
+    <!-- 其他依赖 -->
+</dependencies>
+```
+
+以上更改确保 Logback 被移除，同时将 Log4j2 添加到类路径中。
+
+#### 创建 Log4j2 配置文件
+
+Log4j2 的配置可以写在 `XML` 或 `YAML` 文件中。
+配置文件应放在 `src/main/resources` 目录下，命名为：
+
+* `log4j2.xml`，或
+* `log4j2-spring.xml`（推荐使用该名称，Spring Boot 会更好地控制日志初始化）。
+
+以下是一个示例 XML 配置文件：
+
+```xml
+<!-- Listing 2.27 示例 Log4j2 XML 配置 -->
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 根元素，status="WARN" 表示 Log4j2 自身内部日志级别 -->
+<Configuration status="WARN">
+
+    <!-- 定义日志输出格式模板 -->
+    <Properties>
+        <Property name="LOG_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%p] [%15.15t] %-40.40c{1.} : %m%n%ex
+        </Property>
+    </Properties>
+
+    <!-- 定义日志输出目标 -->
+    <Appenders>
+
+        <!-- 控制台输出 -->
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}" />
+        </Console>
+
+        <!-- 文件输出，日志写入 logs/application-log4j2.log -->
+        <RollingFile name="FileAppender"
+                     fileName="logs/application-log4j2.log"
+                     filePattern="logs/application-log4j2-%d{yyyy-MM-dd}.i.log">
+            <PatternLayout>
+                <Pattern>${LOG_PATTERN}</Pattern>
+            </PatternLayout>
+
+            <!-- 滚动策略：基于大小和时间 -->
+            <Policies>
+                <!-- 文件超过 10MB 时滚动 -->
+                <SizeBasedTriggeringPolicy size="10MB" />
+                <!-- 每 7 天生成新日志文件 -->
+                <TimeBasedTriggeringPolicy interval="7" />
+            </Policies>
+
+            <!-- 最多保留 10 个历史文件 -->
+            <DefaultRolloverStrategy max="10" />
+        </RollingFile>
+    </Appenders>
+
+    <!-- 定义日志器 -->
+    <Loggers>
+        <!-- com.manning.sbip 包使用 DEBUG 级别，输出到文件 -->
+        <Logger name="com.manning.sbip" level="debug" additivity="false">
+            <AppenderRef ref="FileAppender" />
+        </Logger>
+
+        <!-- Spring Boot 框架日志使用 INFO 级别，输出到控制台 -->
+        <Logger name="org.springframework.boot" level="info" additivity="false">
+            <AppenderRef ref="ConsoleAppender" />
+        </Logger>
+
+        <!-- 根日志器，INFO 级别，同时输出到文件与控制台 -->
+        <Root level="info">
+            <AppenderRef ref="FileAppender" />
+            <AppenderRef ref="ConsoleAppender" />
+        </Root>
+    </Loggers>
+
+</Configuration>
+```
+
+说明：
+
+* `SizeBasedTriggeringPolicy`：日志文件超过指定大小（10MB）时滚动；
+* `TimeBasedTriggeringPolicy`：按时间（7 天）滚动日志；
+* `DefaultRolloverStrategy`：最多保留 10 个历史文件；
+* `AppenderRef`：指定日志输出目标；
+* `Root`：全局默认日志级别为 INFO。
+
+
+#### 修改 Spring Boot 主类
+
+接下来，在主类中创建一个 Logger 实例，并使用它输出启动日志。
+
+```java
+// Listing 2.28 Spring Boot 主类，使用 Log4j2 输出日志
+
+package com.manning.sbip.ch02;
+
+// 导入包
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class CourseTrackerApplication {
+
+    // 创建 Logger 实例（使用 SLF4J 抽象层）
+    private static final Logger logger =
+        LoggerFactory.getLogger(CourseTrackerApplication.class);
+
+    public static void main(String[] args) {
+        SpringApplication.run(CourseTrackerApplication.class, args);
+
+        // 使用 logger 输出日志，而不是 System.out.println()
+        logger.info("CourseTrackerApplication started successfully with Log4j2 configuration");
+    }
+}
+```
+
+代码说明：
+
+* `LoggerFactory.getLogger()` 用于创建日志记录器；
+* `LoggerFactory` 来自 **SLF4J**（Simple Logging Facade for Java），它为日志框架提供统一接口；
+* `logger.info()` 用于输出 INFO 级别日志；
+* 运行后，日志文件将生成在项目根目录下的 `logs/application-log4j2.log`。
+
+关于 SLF4J 的更多信息可参考 [http://www.slf4j.org/](http://www.slf4j.org/)。
+
+
+#### 讨论（Discussion）
+
+通过本节内容，你学习了如何在 Spring Boot 中配置 Log4j2。
+Log4j2 是 Java 生态中最常用、最稳定的日志框架之一，具有丰富的功能与高度可扩展性。
+
+你可以在 [官方文档](https://logging.apache.org/log4j/2.x/manual) 中了解更多配置方式
+
+建议：
+
+* 尝试不同日志级别（INFO、DEBUG、TRACE 等）；
+* 试用不同类型的 Appender（如 JDBC、SMTP）；
+* 修改 `SizeBasedTriggeringPolicy` 的阈值，观察日志滚动行为；
+* 在 Java 代码中生成大量日志，以测试文件切分与历史日志保留策略。
+
 
