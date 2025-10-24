@@ -196,7 +196,7 @@ Spring Boot 支持使用 `.properties` 或 `.yml` 文件进行配置。
 server.port=8081
 spring.datasource.username=sa
 spring.datasource.password=password
-````
+```
 
 上述配置在 `.yml` 文件中的等价形式如下：
 
@@ -366,7 +366,7 @@ Spring Boot 加载配置文件的顺序如下：
 
 ```properties
 app.timeout=${APP_TIMEOUT}
-````
+```
 
 这里的 `APP_TIMEOUT` 是一个操作系统环境变量，我们将在操作系统中为它赋值。  
 在 Windows 中，你可以通过以下命令设置环境变量：
@@ -522,7 +522,7 @@ Spring Boot 允许你在应用的配置文件中定义任意数量的属性，�
     <artifactId>spring-boot-configuration-processor</artifactId>
     <optional>true</optional>
 </dependency>
-````
+```
 
 该依赖会为所有带有 `@ConfigurationProperties` 注解的类生成元数据（metadata），
 IDE（如 IntelliJ IDEA 或 Eclipse）即可根据这些元数据提供自动提示。
@@ -714,4 +714,203 @@ public AppProperties(String name, String ip, @DefaultValue("8080") int port, Sec
 
 更多关于 `@ConfigurationProperties` 的信息可参考[官方文档](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.typesafe-configuration-properties)
 
+## 2.3 在 Spring Boot 应用启动时执行代码  
+*(Executing Code on Spring Boot Application Startup)*
+
+在某些情况下，你可能需要在 Spring Boot 应用启动时执行一些自定义逻辑。  
+例如：
+
+- 在应用初始化完成前执行数据库初始化脚本；  
+- 调用一个 REST 服务以加载应用所需数据。
+
+Spring Boot 提供了两个接口来实现这一点：  
+`CommandLineRunner` 和 `ApplicationRunner`。  
+这两个接口都包含一个单一的 `run(...)` 方法，并会在 Spring Boot 应用初始化完成前被调用一次。
+
+本节将主要介绍 `CommandLineRunner` 的使用，  
+而 `ApplicationRunner` 与其非常类似，可作为扩展练习。
+
+
+### 2.3.1 技巧：使用 CommandLineRunner 在启动时执行代码  
+*(Technique: Using CommandLineRunner to Execute Code at Spring Boot Application Startup)*
+
+#### 问题（Problem）
+你希望在 Spring Boot 启动时执行一些初始化逻辑。
+
+#### 解决方案（Solution）
+你可以通过多种方式配置 `CommandLineRunner`：
+
+- 在主类中实现 `CommandLineRunner` 接口；  
+- 使用 `@Bean` 定义一个 `CommandLineRunner` Bean；  
+- 将 `CommandLineRunner` 定义为一个带有 `@Component` 注解的独立类。
+
+> 💡 **源码地址**  
+> 本节对应示例项目[可以点击](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch02/command-line-runner/spring-boot-app-final)这里查看
+
+#### 示例一：在主类中实现 CommandLineRunner
+
+```java
+package com.manning.sbip.ch02;
+
+// imports
+
+@SpringBootApplication
+public class CourseTrackerApplication implements CommandLineRunner {
+
+    protected final Log logger = LogFactory.getLog(getClass());
+
+    public static void main(String[] args) {
+        SpringApplication.run(CourseTrackerApplication.class, args);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        logger.info("CourseTrackerApplication CommandLineRunner has executed");
+    }
+}
+```
+
+在该示例中，应用启动时会在控制台输出日志消息。
+
+![图 2-1](../assets/2-1.png)
+
+#### 示例二：将 CommandLineRunner 定义为 Spring Bean
+
+```java
+package com.manning.sbip.ch02;
+
+// imports
+
+@SpringBootApplication
+public class CourseTrackerApplication {
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    public static void main(String[] args) {
+        SpringApplication.run(CourseTrackerApplication.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner commandLineRunner() {
+        return args -> {
+            logger.info("CommandLineRunner executed as a bean definition with "
+                        + args.length + " arguments");
+            for (int i = 0; i < args.length; i++) {
+                logger.info("Argument: " + args[i]);
+            }
+        };
+    }
+}
+```
+
+该示例使用 Java Lambda 表达式定义了一个函数式接口实现。  
+`CommandLineRunner` 是一个函数式接口（functional interface），仅包含 `run(String... args)` 方法。  
+在此方法中，你可以访问命令行参数并执行自定义逻辑。
+
+运行命令：
+
+```bash
+java -jar command-line-runner-0.0.1-SNAPSHOT.jar Spring
+```
+
+Spring 将作为参数传递给 `CommandLineRunner` 的 `args`。
+
+这种方式的优点是无需在主类上实现接口，更加灵活和简洁。
+
+::: tip
+
+**@Bean vs @Component**
+
+* `@Bean` 用于你**无法直接访问源码**的类，例如第三方依赖；
+* `@Component` 用于你**可以修改源码**的类，直接在类上标注注解即可。
+
+:::
+
+
+#### 示例三：使用 @Component 注解定义 CommandLineRunner
+
+```java
+package com.manning.sbip.ch02.commandline;
+
+// imports
+
+// Order 注解定义了注解组件的排序顺序。例如，如果您有多个 CommandLineRunner 实例，您可以使用 Order 注解来指定它们的执行顺序。
+@Order(1)
+@Component
+public class MyCommandLineRunner implements CommandLineRunner {
+
+    protected final Logger logger = LogFactory.getLogger(getClass());
+
+    @Override
+    public void run(String... args) throws Exception {
+        logger.info("MyCommandLineRunner executed as a Spring Component");
+    }
+}
+```
+
+Spring Boot 会自动扫描该组件并实例化它。  
+你可以使用 `@Order` 注解定义多个 `CommandLineRunner` 的执行顺序。
+
+
+#### 示例四：定义多个 Runner 并控制执行顺序
+
+```java
+package com.manning.sbip.ch02.commandline;
+
+// imports
+
+@Order(2)
+@Component
+public class AnotherCommandLineRunner implements CommandLineRunner {
+
+    protected final Logger logger = LogFactory.getLogger(getClass());
+
+    @Override
+    public void run(String... args) throws Exception {
+        logger.info("AnotherCommandLineRunner executed as a Spring Component");
+    }
+}
+```
+
+当应用启动时，`@Order(1)` 的 Runner 会先执行，接着执行 `@Order(2)` 的 Runner。   
+你会在控制台日志中看到顺序输出。
+
+![图 2-1](../assets/2-1.png)
+
+#### 自动注入依赖（Autowired Dependencies）
+
+`CommandLineRunner` 在 Spring Boot 应用**初始化即将完成时执行**，此时所有 Bean 都已被创建，可以安全地进行依赖注入。
+
+例如：
+
+```java
+@Bean
+public CommandLineRunner printCourses(CourseRepository courseRepository) {
+    return args -> {
+        System.out.println("=========== Course Details ===========");
+        courseRepository.findAll().forEach(System.out::println);
+    };
+}
+```
+
+这里的 `CourseRepository` 是一个 Spring Data Repository，将在第 3 章中详细介绍。  
+目前只需理解：Spring 会自动将该依赖注入到 `CommandLineRunner` 中。
+
+
+#### 总结（Summary）
+
+通过本节，你学习了三种在应用启动时执行代码的方式：
+
+1. **在主类中实现 `CommandLineRunner` 接口**
+
+   * 简单直接，但只能定义一个，无法控制执行顺序。
+2. **使用 `@Bean` 定义 CommandLineRunner Bean**
+
+   * 支持多实例、可访问外部依赖、可传参。
+3. **使用 `@Component` 定义独立的 CommandLineRunner 类**
+
+   * 结构更清晰，可通过 `@Order` 控制执行顺序。
+
+✅ 前两种方式适合简单逻辑；   
+✅ 第三种方式适合模块化管理启动逻辑，让主类保持简洁。
 
