@@ -1467,3 +1467,14 @@ Bean Validation 允许使用注解的方式对应用中的字段进行验证。
 
 在下一节中，我们将学习如何基于 Bean Validation 框架编写**自定义约束验证器（custom constraint validator）**。
 
+### 小结（Summary）
+
+在本章中，我们学习了 Spring Boot 开发中多个核心技巧：
+
+* 管理应用配置的多种方式；
+* 使用 `@ConfigurationProperties` 实现类型安全配置；
+* 使用 `CommandLineRunner` 在应用启动时执行初始化逻辑；
+* 配置 Spring Boot 默认日志及自定义 Log4j2 日志；
+* 使用 Bean Validation API 验证 POJO，包括内置与自定义注解。
+
+在下一章中，我们将学习如何在 Spring Boot 应用中访问数据库。
