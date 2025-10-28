@@ -67,8 +67,8 @@ JPA 本身只是一个**规范（specification）**，定义了一套接口、�
 
 常见的 JPA 实现包括：
 
-* **Hibernate**：[https://hibernate.org/orm/](https://hibernate.org/orm/)
-* **EclipseLink**：[https://www.eclipse.org/eclipselink/#jpa](https://www.eclipse.org/eclipselink/#jpa)
+* [**Hibernate**]((https://hibernate.org/orm/))
+* [**EclipseLink**](https://www.eclipse.org/eclipselink/#jpa)
 
 这些框架提供了对 JPA 规范的具体实现，从而让我们能够在 Spring 应用中轻松地完成数据库持久化与对象操作。
 
@@ -153,3 +153,160 @@ Spring Data 是一个为多种主流数据存储系统提供支持的“伞形�
 
 Spring Data 的子模块包含针对特定数据库技术（例如 JDBC、JPA）或供应商（例如 MongoDB、Cassandra）的实现。  
 这些子模块利用 Spring Data Commons 提供的核心框架特性，从而在不同数据库之间保持统一的编程体验。
+
+## 3.2 在 Spring Boot 应用中配置数据库（Configuring a database in a Spring Boot application）
+
+在任何应用中，配置并访问数据库都是一项基础操作，Spring Boot 应用也不例外。  
+Spring Boot 提供了多种技术，帮助你在应用中配置并访问数据库。下面我们来看如何在 Spring Boot 应用中配置并访问一个关系型数据库。
+
+### 3.2.1 技巧：在 Spring Boot 应用中配置关系型数据库（Technique: Configuring a relational database in a Spring Boot application）
+
+在本技巧中，我们将演示如何在 Spring Boot 应用中配置关系型数据库。
+
+#### 问题（Problem）
+
+大多数应用都需要与数据库交互以存储和检索数据。但在与数据库通信之前，你必须先在应用中完成数据库配置。
+你需要在 Spring Boot 应用中配置并访问一个关系型数据库。
+
+#### 解决方案（Solution）
+
+要在 Spring Boot 中配置关系型数据库，可以在 `pom.xml` 中添加 `spring-boot-starter-data-jpa` 与相应数据库驱动依赖。  
+此外，你还需要提供数据库连接的详细信息，例如用户名、密码、驱动类以及连接 URL。
+
+::: tip
+
+**使用哪种关系型数据库？**
+
+在演示中，我们使用内存型关系数据库 [**H2**](https://www.h2database.com/html/main.html)。
+当然，你也可以使用任何其他关系型数据库继续完成本技巧，例如 [MySQL](https://www.mysql.com/)、[Oracle](http://mng.bz/y4xB) 或 [PostgreSQL](https://www.postgresql.org/)。   
+除了更换数据库驱动及相关配置参数外，配置步骤保持一致。
+
+需要保证你所使用的数据库实例正在运行，以便 Spring Boot 应用能够连接到它。你可以在本地安装并配置数据库，也可以使用来自云服务商（如 AWS、Azure）的数据库实例。  
+对于云端数据库，你只需更换连接 URL，其他配置保持不变。本示例使用嵌入式的 H2 内存数据库。
+
+源代码（Source code）  
+可在配套 GitHub 仓库获取本技巧所用 Spring Boot 项目的[基础版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/configuring-relational-database/course-tracker-start) 和 [完成版项目](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/configuring-relational-database/course-tracker-final)。
+
+:::
+
+在 `pom.xml` 中添加如下两个依赖（可放在 `<dependencies>` 任意位置）：
+
+```xml
+<!-- Listing 3.1 Spring Data JPA starter 和 H2 依赖 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
+
+在清单 3.1 中，第一条依赖引入 Spring Data JPA，第二条依赖则将 H2 数据库驱动加入到项目中。   
+如果使用除 H2 以外的数据库，请在 `pom.xml` 中加入对应的数据库驱动依赖（可在 Maven Central 查找）。
+
+其中，Spring Data JPA 让你可以通过 ORM 技术在无需显式编写 SQL 的情况下管理业务领域对象；   
+而 H2 的内存模式允许你在 Spring Boot 应用中使用嵌入式数据库（数据会在应用重启时清空）。
+
+接下来在应用的 `application.properties` 中添加 H2 的连接信息：
+
+```properties
+# Listing 3.2 带有 H2 数据库配置的应用属性
+spring.datasource.url=jdbc:h2:mem:sbipdb       # 数据库 URL（本示例使用 sbipdb schema）
+spring.datasource.driverClassName=org.h2.Driver # H2 驱动类
+spring.datasource.username=sa                   # 数据库用户名
+spring.datasource.password=password             # 数据库密码
+spring.h2.console.enabled=true                  # 启用 H2 控制台（仅 H2 可用）
+```
+
+清单 3.2 中提供了 H2 的连接 URL、驱动类、用户名、密码，并启用了 H2 控制台。  
+H2 控制台提供了一个基于浏览器的 UI，可在内存数据库中执行 SQL。  
+这些配置足以让 Spring Boot 在应用中创建并配置数据源。
+
+为验证数据源是否正确创建，定义一个简单的单元测试，断言数据源类型与底层数据库产品名称（清单 3.3）：
+
+```java
+// Listing 3.3 用单元测试验证数据源细节
+package com.manning.sbip.ch03;
+
+// 省略 import 语句以保持可读性
+
+@SpringBootTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private javax.sql.DataSource dataSource;
+
+    @Test
+    void givenDatasourceAvailableWhenAccessDetailsThenExpectDetails() throws java.sql.SQLException {
+        // 断言数据源实现类为 HikariCP
+        org.assertj.core.api.Assertions.assertThat(dataSource.getClass().getName())
+            .isEqualTo("com.zaxxer.hikari.HikariDataSource");
+
+        // 断言底层数据库产品名称为 H2
+        org.assertj.core.api.Assertions.assertThat(
+                dataSource.getConnection().getMetaData().getDatabaseProductName())
+            .isEqualTo("H2");
+    }
+}
+```
+
+执行该测试用例后，你会看到两个断言均通过（见图 3.3）。
+
+![3-3](../assets/3-3.png)
+
+> 图 3.3 在 IntelliJ IDEA 中成功执行的单元测试（Unit test case executed successfully in IntelliJ IDEA）
+
+#### 讨论（Discussion）
+
+通过本技巧，你学习了如何用少量配置在 Spring Boot 应用中配置关系型数据库。  
+例如，`application.properties` 中的数据库配置参数，加上类路径中的 Spring Data JPA 与 H2 驱动 jar，就能让 Spring Boot 在应用中配置一个 H2 数据源。  
+此数据源即可被应用用于数据库通信。
+
+作为数据库配置的一部分，Spring Boot 会自动配置 [**HikariCP**](https://github.com/brettwooldridge/HikariCP) 作为数据库连接池。  
+连接池在应用启动时创建一组数据库连接，供应用复用。这样每次需要数据库连接时无需重新创建与销毁，使用后将连接归还连接池即可。Spring Boot 默认使用 HikariCP 作为连接池实现。
+
+如果你想了解 HikariCP 依赖从何而来，可以在 IDE 中打开示例应用的 `pom.xml`，查看 `spring-boot-starter-data-jpa` 依赖的传递依赖关系：  
+`spring-boot-starter-data-jpa` 依赖于 `spring-boot-starter-jdbc`，而后者又依赖 HikariCP（见图 3.4）。
+
+![3-4](../assets/3-4.png)
+
+> 图 3.4 HikariCP 连接池库的传递依赖（HikariCP connection pool library transitive dependency）
+
+若需使用 HikariCP 以外的连接池库，可以在 `spring-boot-starter-data-jpa` 依赖上排除 HikariCP，并加入你选择的连接池库（如 Oracle UCP、Tomcat JDBC、DBCP2 等）。
+清单 3.4 展示了如何排除 HikariCP 并改用 `tomcat-jdbc`：
+
+```xml
+<!-- Listing 3.4 在 POM 中排除 HikariCP 并加入 Tomcat 连接池 -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+
+<dependency>
+    <groupId>org.apache.tomcat</groupId>
+    <artifactId>tomcat-jdbc</artifactId>
+</dependency>
+```
+
+基于清单 3.4 的配置，Spring Boot 选择连接池实现的策略如下：
+
+1. 如果 **HikariCP** 不可用，而类路径中存在 **Apache Tomcat** 的连接池依赖，则使用 Tomcat 连接池。
+2. 若 HikariCP 和 Apache Tomcat 连接池依赖都不可用，则尝试使用 **Apache Commons DBCP2**（[https://commons.apache.org/proper/commons-dbcp）。](https://commons.apache.org/proper/commons-dbcp）。)
+3. 如果 DBCP2 也不可用，Spring Boot 会配置 JDK 的默认数据源（`javax.sql.DataSource`）。
+
+在本技巧中，我们通过在 `application.properties` 中配置少量参数，使 H2 数据库在 Spring Boot 应用中可用。实际上，Spring Boot 还提供了大量可选配置以便对数据库配置进行微调。
+
+例如，若使用默认的 HikariCP，你可能希望自定义连接池大小：可通过 `spring.datasource.hikari.maximum-pool-size` 指定每个池的最大连接数。    
+如果使用其他连接池库，则需要配置对应库的特定属性。
+
+若想进一步了解可用的数据库配置参数，可参考 [Spring Boot 文档](https://docs.spring.io/spring-boot/appendix/application-properties/index.html#appendix.application-properties.data) 的应用属性说明。
