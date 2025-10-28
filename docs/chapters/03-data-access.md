@@ -301,7 +301,7 @@ class CourseTrackerSpringBootApplicationTests {
 基于清单 3.4 的配置，Spring Boot 选择连接池实现的策略如下：
 
 1. 如果 **HikariCP** 不可用，而类路径中存在 **Apache Tomcat** 的连接池依赖，则使用 Tomcat 连接池。
-2. 若 HikariCP 和 Apache Tomcat 连接池依赖都不可用，则尝试使用 **Apache Commons DBCP2**（[https://commons.apache.org/proper/commons-dbcp）。](https://commons.apache.org/proper/commons-dbcp）。)
+2. 若 HikariCP 和 Apache Tomcat 连接池依赖都不可用，则尝试使用 [**Apache Commons DBCP2**](https://commons.apache.org/proper/commons-dbcp)。
 3. 如果 DBCP2 也不可用，Spring Boot 会配置 JDK 的默认数据源（`javax.sql.DataSource`）。
 
 在本技巧中，我们通过在 `application.properties` 中配置少量参数，使 H2 数据库在 Spring Boot 应用中可用。实际上，Spring Boot 还提供了大量可选配置以便对数据库配置进行微调。
