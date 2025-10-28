@@ -67,7 +67,7 @@ JPA 本身只是一个**规范（specification）**，定义了一套接口、�
 
 常见的 JPA 实现包括：
 
-* [**Hibernate**]((https://hibernate.org/orm/))
+* [**Hibernate**](https://hibernate.org/orm/)
 * [**EclipseLink**](https://www.eclipse.org/eclipselink/#jpa)
 
 这些框架提供了对 JPA 规范的具体实现，从而让我们能够在 Spring 应用中轻松地完成数据库持久化与对象操作。
