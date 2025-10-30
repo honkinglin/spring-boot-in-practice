@@ -310,3 +310,121 @@ class CourseTrackerSpringBootApplicationTests {
 如果使用其他连接池库，则需要配置对应库的特定属性。
 
 若想进一步了解可用的数据库配置参数，可参考 [Spring Boot 文档](https://docs.spring.io/spring-boot/appendix/application-properties/index.html#appendix.application-properties.data) 的应用属性说明。
+
+### 3.2.2 在 Spring Boot 应用中配置 MongoDB 数据库（Technique: Configuring MongoDB database in a Spring Boot application）
+
+在本技巧中，我们将演示如何在 Spring Boot 应用中配置 MongoDB 数据库。
+
+#### 问题（Problem）
+
+你已经了解了如何在 Spring Boot 应用中配置关系型数据库。同时，随着关系型数据库之外的应用场景不断增长，NoSQL 数据库也逐渐流行起来。  
+你需要在 Spring Boot 应用中配置常用的 NoSQL 数据库 MongoDB。
+
+#### 解决方案（Solution）
+
+MongoDB 是一种流行的 NoSQL 数据库，它以类似 JSON 的文档格式存储数据。  
+Spring Boot 提供了便捷的方式，通过 `spring-boot-starter-data-mongodb` 依赖与 MongoDB 数据库集成。在本技巧中，你将学习如何从 Spring Boot 应用连接到 MongoDB 数据库。
+
+::: tip Source code
+你可以在书籍配套 GitHub 仓库中找到本技巧使用的 [Spring Boot 工程基础版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/configuring-mongodb-database/course-tracker-start) 
+
+本技巧完成后的[最终版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/configuring-mongodb-database/course-tracker-final)
+:::
+
+要在 Spring Boot 中配置 MongoDB，你需要在项目的 `pom.xml` 文件中添加以下依赖，如下所示。
+
+#### Listing 3.5 MongoDB Maven dependencies
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-mongodb</artifactId>
+</dependency>
+<dependency>
+    <groupId>de.flapdoodle.embed</groupId>
+    <artifactId>de.flapdoodle.embed.mongo</artifactId>
+</dependency>
+```
+
+第一个依赖为 Spring Boot 应用提供 Spring Data MongoDB 支持。   
+第二个依赖将 Flapdoodle 嵌入式 MongoDB 数据库添加到应用中。   
+更多相关信息可参考 [这里](https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo)   
+如果你使用真实 MongoDB 实例，则无需嵌入式依赖。
+
+现在我们创建一个测试用例以验证如何使用 MongoDB，如下所示。
+
+#### Listing 3.6 Unit test to validate the use of MongoDB in Spring Data
+
+```java
+package com.manning.sbip.ch03;
+
+// Import statements are excluded as a matter of readability
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataMongoTest
+@ExtendWith(SpringExtension.class)
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Test
+    public void givenObjectAvailableWhenSaveToCollectionThenExpectValue() {
+        // given
+        DBObject object = BasicDBObjectBuilder.start().add("Manning", "Spring Boot In Practice").get();
+        // when
+        mongoTemplate.save(object, "collection");
+        // then
+        assertThat(mongoTemplate.findAll(DBObject.class, "collection"))
+            .extracting("Manning")
+            .containsOnly("Spring Boot In Practice");
+    }
+}
+```
+
+让我们解释该测试用例执行的操作：
+
+* 测试类中通过 `@Autowired` 注入了 `MongoTemplate`。实例由 Spring Boot 创建，`MongoTemplate` 是一个帮助类，用于执行 MongoDB 操作。  
+* 你创建了一个文档，其中键为 Manning，值为 *Spring Boot in Practice*。MongoDB 将文档作为集合的一部分进行存储，因此你将该文档添加至名为 `collection` 的集合中。
+* 最后，你从集合中读取该文档，提取 key，并断言返回的值。
+
+### 讨论（Discussion）
+
+关系型数据库以行和列的表格形式存储数据。然而，并非所有数据都适合以表格方式存储。   
+有些情况下，数据是非结构化的，并以文档形式保存。NoSQL 数据库便是专为此类数据设计的，通常被称为**文档数据库**。  
+MongoDB 是最流行且领先的文档数据库之一。
+
+在本技巧中，你使用的是 MongoDB 的**内存实例**。这种方式可以快速引导应用，无需安装本地或远程数据库。
+
+如果你拥有本地或远程 MongoDB 实例（例如云数据库），你可以移除嵌入式配置，并在 `application.properties` 中提供实际连接配置。以下示例展示可用的数据库配置。
+
+#### Listing 3.7 MongoDB properties
+
+```
+spring.data.mongodb.authentication-database=<Authentication database name>
+spring.data.mongodb.database=<Database name>
+spring.data.mongodb.field-naming-strategy=<Field Naming Strategy>
+spring.data.mongodb.gridfs.database=<GridFS database>
+spring.data.mongodb.host=<Database Hostname>
+spring.data.mongodb.password=<Database password>
+spring.data.mongodb.port=<Database Port>
+spring.data.mongodb.uri=<Database URI>
+spring.data.mongodb.username=<Database Username>
+spring.mongodb.embedded.version=2.6.10
+```
+
+* Authentication database name：认证数据库名称
+* Fully qualified name of the FieldNamingStrategy to use：使用的 FieldNamingStrategy 完整类名
+* Mongo server host：MongoDB 服务器主机
+* GridFS database name：GridFS 数据库名称
+* Login password of the Mongo server：MongoDB 登录密码
+* Mongo server port（27017 默认）：MongoDB 服务端口
+* Login password of the Mongo server：登录密码
+* Mongo database URI（设置 URI 后将忽略 host & port）：数据库 URI
+* Embedded MongoDB version：嵌入式 MongoDB 版本
+
+你可以参考 [Spring Boot 官方文档](https://docs.spring.io/spring-boot/documentation.html#documentation.advanced) 以获取所有支持的配置属性。 
+
+如果你是 MongoDB 新手，可以参考本书配套 GitHub wiki 提供的[入门指南](https://github.com/spring-boot-in-practice/repo/wiki/Beginners-Guide-to-MongoDB)。
+
