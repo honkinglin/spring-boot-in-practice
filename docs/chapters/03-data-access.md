@@ -428,3 +428,205 @@ spring.mongodb.embedded.version=2.6.10
 
 如果你是 MongoDB 新手，可以参考本书配套 GitHub wiki 提供的[入门指南](https://github.com/spring-boot-in-practice/repo/wiki/Beginners-Guide-to-MongoDB)。
 
+### 3.2.3 初始化关系型数据库的模式（Technique: Initializing a relational database schema with a Spring Boot application）
+
+在本技巧中，我们将讨论如何在 Spring Boot 应用中初始化关系型数据库的结构（schema）。
+
+#### 问题
+
+在前面的技巧中，你已经了解了如何在 Spring Boot 应用中配置关系型数据库。然而，在开始访问数据库之前，你必须确保数据库模式（schema）已正确初始化。
+例如，所有必需的表与索引需要被创建，相关的数据插入脚本也要被执行。因此，必须在应用启动时初始化数据库的结构。
+
+#### 解决方案
+
+Spring Boot 允许你使用内置机制或第三方库（如 ORM 框架）来初始化数据库结构。在本技巧中，你将学习如何使用 Spring Data 的内置脚本 —— `schema.sql` 与 `data.sql` 来初始化数据库。
+
+Spring Boot 会从类路径（如 `src/main/resources` 文件夹）或预定义位置加载 SQL 脚本。  
+通常你会定义：
+
+* `schema.sql` 文件：包含所有 **DDL（数据定义语言）** 脚本，用于创建数据库结构；
+* `data.sql` 文件：包含所有 **DML（数据操作语言）** 脚本，用于插入初始化数据。
+
+只需将这两个文件放入 `src/main/resources` 文件夹，Spring Boot 会在启动时自动检测并执行它们。
+
+此外，还可以通过在 `application.properties` 中使用
+`spring.datasource.schema` 和 `spring.datasource.data`
+属性来定制这些行为。
+
+#### DDL 与 DML 简介（DDL and DML in a nutshell）
+
+* **DDL（Data Definition Language）**
+  用于定义数据库结构（用户、模式、表、索引、约束等）。  
+  例如，在 H2 数据库中创建一个名为 `AUTHORS` 的表：
+
+  ```sql
+  create table AUTHORS (
+      id bigint not null,
+      name varchar(255),
+      primary key (id)
+  );
+  ```
+
+* **DML（Data Manipulation Language）**
+  用于操作数据，例如 `INSERT`、`UPDATE`、`DELETE`。  
+  下例向 `AUTHORS` 表中插入一条数据：
+
+  ```sql
+  INSERT INTO AUTHORS(id, name) VALUES(1, 'John Doe');
+  ```
+
+#### 源码（Source code）
+
+你可以从本书配套的 GitHub 仓库获取本技巧的示例项目：  
+[基础版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/initialize-relational-database-with-schema/course-tracker-start)   
+[最终版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/initialize-relational-database-with-schema/course-tracker-final)
+
+在使用非嵌入式数据库时，需要在 `application.properties` 中设置：
+
+```properties
+spring.sql.init.mode=always
+```
+
+该属性指示 Spring Boot 始终初始化数据库结构。它支持三个取值：
+
+* `embedded`：嵌入式数据库（默认值，如 H2）
+* `always`：始终初始化
+* `never`：从不初始化
+
+当使用 H2 这类内存数据库时，可以忽略此项；但若使用 MySQL 等外部数据库，则应设为 `always`。
+
+> 🔹 嵌入式数据库自动初始化，例如 [H2](https://www.h2database.com/html/main.html)
+
+#### Listing 3.8 更新的 application.properties
+
+```properties
+spring.sql.init.mode=always
+# 其他数据源属性，如用户名、密码、驱动名和连接 URL
+```
+
+> 该配置指示 Spring Boot 初始化数据库结构。默认仅对嵌入式数据库启用。对于 MySQL 等外部数据库，需显式配置为 `always`。
+
+现在我们定义 `schema.sql` 与 `data.sql` 文件。
+
+在本示例中，假设我们管理课程（Course）信息。  
+业务对象为 `Course`，我们将在数据库中创建 `COURSES` 表，并在表中插入一些示例数据。
+
+#### Listing 3.9 数据库结构定义（Database schema.sql configuration）
+
+```sql
+CREATE TABLE COURSES (
+  id int(15) NOT NULL,
+  name varchar(100) NOT NULL,
+  category varchar(20) NOT NULL,
+  rating int(1) NOT NULL,
+  description varchar(1000) NOT NULL,
+  PRIMARY KEY (id)
+);
+```
+
+#### Listing 3.10 数据初始化脚本（Database initialization scripts）
+
+```sql
+INSERT INTO COURSES(ID, NAME, CATEGORY, RATING, DESCRIPTION)
+VALUES(1, 'Rapid Spring Boot Application Development', 'Spring', 4,
+'Spring Boot gives all the power of the Spring Framework without all of the complexities');
+
+INSERT INTO COURSES(ID, NAME, CATEGORY, RATING, DESCRIPTION)
+VALUES(2, 'Getting Started with Spring Security DSL', 'Spring', 3,
+'Learn Spring Security DSL in easy steps');
+
+INSERT INTO COURSES(ID, NAME, CATEGORY, RATING, DESCRIPTION)
+VALUES(3, 'Scalable, Cloud Native Data Applications', 'Spring', 4,
+'Manage Cloud based applications with Spring Boot');
+
+INSERT INTO COURSES(ID, NAME, CATEGORY, RATING, DESCRIPTION)
+VALUES(4, 'Fully Reactive: Spring, Kotlin, and JavaFX Playing Together', 'Spring', 3,
+'Unleash the power of Reactive Spring with Kotlin and Spring Boot');
+
+INSERT INTO COURSES(ID, NAME, CATEGORY, RATING, DESCRIPTION)
+VALUES(5, 'Getting Started with Spring Cloud Kubernetes', 'Spring', 5,
+'Master Spring Boot application deployment with Kubernetes');
+```
+
+#### 特定数据库的 SQL 文件（Database-specific schema and data SQL files）
+
+除了 `schema.sql` 与 `data.sql` 外，Spring Boot 还支持**数据库特定 SQL 文件**。  
+例如，如果应用同时支持多种数据库（语法存在差异），可以创建：
+
+* `schema-h2.sql` / `data-h2.sql`
+* `schema-mysql.sql` / `data-mysql.sql`
+
+并在 `application.properties` 中指定当前使用的数据库平台：
+
+```properties
+spring.datasource.platform=h2
+```
+
+> 每次仅一个数据库处于激活状态。
+> 你可以同时维护多组 SQL 文件，但通过 `spring.datasource.platform` 切换使用。
+
+#### 验证数据库初始化（Unit test to validate schema initialization）
+
+以下测试通过 JDBC 查询 `COURSES` 表中的课程数量，以验证 Spring Boot 是否成功执行了 SQL 初始化脚本。
+
+##### Listing 3.11
+
+```java
+@SpringBootTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private DataSource dataSource;
+
+    @Test
+    public void whenCountAllCoursesThenExpectFiveCourses() throws SQLException {
+        ResultSet rs = null;
+        int noOfCourses = 0;
+
+        try (PreparedStatement ps = dataSource.getConnection()
+                .prepareStatement("SELECT COUNT(1) FROM COURSES")) {
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                noOfCourses = rs.getInt(1);
+            }
+            assertThat(noOfCourses).isEqualTo(5L);
+        } finally {
+            if (rs != null) rs.close();
+        }
+    }
+}
+```
+
+该测试注入了 `DataSource` 并使用基础 JDBC 代码统计 `COURSES` 表中的记录数。  
+在本示例中，我们通过 5 条 `INSERT` 语句插入了五个课程，因此断言结果为 5。
+
+#### 自定义 schema 与 data 文件路径（Custom schema and data file location）
+
+你也可以为 schema 和 data 文件指定不同路径或文件名，例如：
+
+##### Listing 3.12
+
+```properties
+spring.sql.init.schema-locations=classpath:sql/schema/sbip-schema.sql
+spring.sql.init.data-locations=classpath:sql/data/sbip-data.sql
+```
+
+如果文件位于文件系统（而非 classpath），也可使用：
+
+```properties
+spring.sql.init.data-locations=classpath:sql/data/sbip-data.sql,file:///c:/sql/data/reference-data.sql
+```
+
+#### 讨论（Discussion）
+
+在本技巧中，你学习了如何使用 Spring Boot 内置功能通过简单 SQL 文件初始化数据库。
+
+总结如下：
+
+* 使用 `schema.sql` 提供数据库结构定义（DDL）；
+* 使用 `data.sql` 提供数据填充逻辑（DML）；
+* 可以根据数据库平台创建特定的 SQL 文件；
+* 可通过 `spring.sql.init.*` 系列属性自定义路径与加载规则。
+
+至此，你已掌握 Spring Boot 基础数据库配置与通信技巧。  
+接下来（3.3 节），我们将学习如何使用 **Spring Data JPA** 管理数据库通信，以更简洁高效地完成 CRUD 操作。
