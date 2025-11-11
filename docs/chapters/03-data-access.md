@@ -630,3 +630,54 @@ spring.sql.init.data-locations=classpath:sql/data/sbip-data.sql,file:///c:/sql/d
 
 至此，你已掌握 Spring Boot 基础数据库配置与通信技巧。  
 接下来（3.3 节），我们将学习如何使用 **Spring Data JPA** 管理数据库通信，以更简洁高效地完成 CRUD 操作。
+
+## 3.3 理解 CrudRepository 接口（Understanding the CrudRepository interface）
+
+在学习 `CrudRepository` 接口之前，你需要先了解 `Repository` 接口。  
+Spring Data 的 repository 模块使用这个通用接口作为数据源的主要抽象。它接收一个**业务领域类（business domain class）**和其**标识符类型（identifier type）**作为泛型参数。
+
+例如，在本书示例应用 **CourseTracker** 中，你需要管理课程信息，这些课程详情被表示为 `Course` 类实例，并拥有 `long` 类型的标识符。
+
+### Repository 接口（The Repository interface）
+
+`Repository` 是一个**标记接口（marker interface）**，主要用于捕获领域类及其 ID 类型信息。
+标记接口本身没有任何方法或常量，只在运行时提供对象的类型信息。
+
+#### Listing 3.13 Spring Data repository interface
+
+```java
+public interface Repository<T, ID> {}
+```
+
+### CrudRepository 接口（The CrudRepository interface）
+
+`CrudRepository` 是 `Repository` 的子接口，提供了一组基础的 CRUD（增删改查）操作。
+
+下方展示了来自 `spring-data-commons` 模块的接口定义。
+你可以在此处查看源码：[http://mng.bz/jyzP](http://mng.bz/jyzP)
+
+#### Listing 3.14 Spring Data CrudRepository methods
+
+```java
+public interface CrudRepository<T, ID> extends Repository<T, ID> {
+
+    <S extends T> S save(S entity);        // 保存一个实体
+    Optional<T> findById(ID id);           // 根据 ID 查找实体
+    Iterable<T> findAll();                 // 查找所有实体
+    long count();                          // 返回实体数量
+    void deleteById(ID id);                // 根据 ID 删除实体
+
+    // Additional methods excluded for brevity
+}
+```
+
+> **说明**
+> 该接口定义中，泛型参数 `T` 表示领域类（domain class），而 `ID` 表示该类的标识符类型。
+
+除了 `CrudRepository` 之外，Spring Data 还提供了一个扩展接口 `PagingAndSortingRepository`。
+该接口在 `CrudRepository` 的基础上，增加了分页（pagination）和排序（sorting）功能。
+
+**下图展示了 Spring Data Commons 模块中的核心接口层次结构：**
+
+![3-5](../assets/3-5.png)
+
