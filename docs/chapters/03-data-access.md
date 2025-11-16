@@ -893,3 +893,122 @@ class CourseTrackerSpringBootApplicationTests {
 两者不要同时启用，否则会冲突。
 若使用 schema.sql，请将 ddl-auto 设置为 `none`。
 :::
+
+### 3.3.2 使用 Spring Data JPA 创建自定义仓库（Technique: Creating a custom Spring Data repository with Spring Data JPA to manage domain objects in a relational database）
+
+在本技巧中，我们将演示如何创建自定义 Spring Data 仓库。
+
+#### Problem（问题）
+
+你希望使用 Spring Data 的仓库接口来管理应用程序的领域对象，但你不希望暴露所有 CRUD 方法。
+
+#### Solution（解决方案）
+
+Spring Data 仓库接口提供了非常优秀且简单的方式来管理业务领域对象。同时，如果框架提供的默认仓库接口不能满足你的需求，你也可以定义自定义仓库接口。
+
+在本技巧中，你将定义一个自定义的 Spring Data 仓库接口，并将其应用到你的 Spring Boot 应用中。
+
+#### Source code（源码）
+
+[基础版本项目](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/creating-custom-spring-data-repository/course-tracker-start)  
+[最终版本项目](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/creating-custom-spring-data-repository/course-tracker-final)  
+
+#### 定义自定义基础仓库接口 BaseRepository
+
+要创建自定义仓库，你需要定义一个基础仓库接口，该接口扩展 Spring Data 的 `Repository`。  
+然后你可以选择性地暴露你希望开放的方法。
+
+下面的 `BaseRepository` 仅暴露 `save()` 和 `findAll()` 两个方法：
+
+```java
+// Listing 3.18 Defining the BaseRepository interface
+package com.manning.sbip.ch03.repository;
+
+import org.springframework.data.repository.NoRepositoryBean;
+import org.springframework.data.repository.Repository;
+
+@NoRepositoryBean
+public interface BaseRepository<T, ID> extends Repository<T, ID> {
+
+    <S extends T> S save(S entity);
+
+    Iterable<T> findAll();
+}
+```
+
+#### 说明
+
+* `@NoRepositoryBean`：表示这个接口只是一个基础接口，Spring Data 不会为其创建代理对象。
+* 你选择性地提供了 `CrudRepository` 中的方法签名，让 Spring Data 在运行时将这些方法路由到 JPA 的具体实现类。
+
+#### 定义自定义仓库接口 CustomizedCourseRepository
+
+下面定义一个真正可用的自定义仓库接口，并让它继承 `BaseRepository`：
+
+```java
+// Listing 3.19 Defining CustomizedCourseRepository interface
+package com.manning.sbip.ch03.repository;
+
+import com.manning.sbip.ch03.model.Course;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CustomizedCourseRepository
+        extends BaseRepository<Course, Long> {
+}
+```
+
+`CustomizedCourseRepository` 类似于之前的 `CourseRepository`，但只暴露 `save(..)` 和 `findAll()` 两个方法。
+
+#### 为自定义仓库编写测试
+
+下面编写一个测试用例，验证自定义仓库是否可用：
+
+```java
+// Listing 3.20 Unit test to validate the custom repository
+package com.manning.sbip.ch03;
+
+// Import Statements are excluded as a matter of readability
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
+@DataJpaTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private CustomizedCourseRepository customizedCourseRepository;
+
+    @Test
+    public void givenCreateCourseWhenFindAllCoursesThenExpectOneCourse() {
+
+        Course course =
+            new Course("Rapid Spring Boot Application Development",
+                "Spring", 4, "'Spring Boot gives all the power of the Spring Framework without all of the complexities'");
+
+        customizedCourseRepository.save(course);
+
+        assertThat(Arrays.asList(customizedCourseRepository.findAll())
+            .size()).isEqualTo(1);
+    }
+}
+```
+
+#### Discussion（讨论）
+
+在本技巧中，你学习了如何在应用中定义自定义的 Spring Data 仓库接口。
+
+虽然多数情况下 `CrudRepository` 已足够，但有时你确实需要控制 CRUD 方法的暴露范围。因此，Spring Data 允许你配合 `@NoRepositoryBean` 自定义仓库行为。
+
+#### @SpringBootTest vs. @DataJpaTest
+
+在上一个技巧中我们使用的是 `@DataJpaTest`，而不是 `@SpringBootTest`。
+
+* `@SpringBootTest` 会启动完整的 Spring 应用上下文（ApplicationContext）。
+* `@DataJpaTest` 只加载 JPA 相关的组件，更轻量，更适合测试 DAO 层。
+
+类似地：
+
+* `@WebMvcTest` 只加载 MVC 组件
+
+Spring Boot 推荐你在单元测试中使用这样的 **分层测试注解**，只加载你需要的那一层组件。
