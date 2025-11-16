@@ -681,3 +681,215 @@ public interface CrudRepository<T, ID> extends Repository<T, ID> {
 
 ![3-5](../assets/3-5.png)
 
+### 3.3.1 使用 Spring Data JPA 管理关系型数据库中的领域对象 (Technique: Managing domain objects in a relational database with Spring Data JPA)
+
+在本节中，我们将探索如何使用 Spring Data JPA 在关系型数据库中管理业务领域对象。
+
+#### 问题（Problem）
+
+你需要在 Spring Boot 应用中使用 Spring Data JPA 来管理关系型数据库中的领域对象。
+
+#### 解决方案（Solution）
+
+在上一节中，你学习了 Spring Data 的 Repository、CrudRepository 与 PagingAndSortingRepository 接口，它们允许你在 Spring Boot 应用中管理领域对象。
+
+在本技巧中，你将学习如何使用 **CrudRepository** 来执行创建、读取、更新和删除（CRUD）等操作。
+
+::: tip Source code
+你可以在此处找到本技巧的 Spring Boot 项目[基础版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/manage-domain-objects-with-jpa/course-tracker-start) 和
+[最终版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/manage-domain-objects-with-jpa/course-tracker-final)
+:::
+
+#### 修改领域对象：添加 JPA 注解
+
+Spring Data JPA 管理的实体需要使用 JPA 注解。下面是经过修改的 `Course` 实体。
+
+```java
+import javax.persistence.*;
+
+@Entity
+@Table(name = "COURSES")
+public class Course {
+
+    @Id
+    @Column(name = "ID")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "NAME")
+    private String name;
+
+    @Column(name = "CATEGORY")
+    private String category;
+
+    @Column(name = "RATING")
+    private int rating;
+
+    @Column(name = "DESCRIPTION")
+    private String description;
+
+    public Course(String name, String category,
+                  int rating, String description) {
+        this.name = name;
+        this.category = category;
+        this.rating = rating;
+        this.description = description;
+    }
+    // Getter/setters, and toString is omitted
+}
+```
+
+#### 你做的修改说明：
+
+* **@Entity**
+  将类标记为 JPA 实体。
+
+* **@Table(name = "COURSES")**
+  指定实体对应的数据库表名。
+
+* **@Column**
+  指定字段对应的数据库表列名。
+
+* **@Id**
+  指定主键字段。
+
+* **@GeneratedValue(strategy = GenerationType.IDENTITY)**
+  指定主键生成策略为自增。
+
+#### 定义自定义 Repository（扩展 CrudRepository）
+
+```java
+package com.manning.sbip.ch03.repository;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import com.manning.sbip.ch03.model.Course;
+
+@Repository
+public interface CourseRepository extends CrudRepository<Course, Long> {
+    // The interface body is actually empty
+}
+```
+
+你为 `CourseRepository` 添加了：
+
+* `@Repository` 注解 → 让 Spring 识别它为数据访问组件
+* 扩展 `CrudRepository<Course, Long>` → 自动继承所有 CRUD 方法
+
+#### 编写单元测试验证 CRUD 操作
+
+```java
+@SpringBootTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Test
+    public void givenCreateCourseWhenLoadTheCourseThenExpectSameCourse() {
+        Course course =
+            new Course("Rapid Spring Boot Application Development",
+                    "Spring", 4,
+                    "Spring Boot gives all the power of the Spring Framework without all of the complexities");
+        Course savedCourse = courseRepository.save(course);
+        assertThat(courseRepository.findById(savedCourse.getId())
+            .get()).isEqualTo(course);
+    }
+
+    @Test
+    public void givenUpdateCourseWhenLoadTheCourseThenExpectUpdatedCourse() {
+        Course course =
+            new Course("Rapid Spring Boot Application Development",
+                    "Spring", 4,
+                    "Spring Boot gives all the power of the complexities");
+        courseRepository.save(course);
+        course.setRating(5);
+        Course savedCourse = courseRepository.save(course);
+        assertThat(courseRepository.findById(savedCourse.getId())
+            .get().getRating()).isEqualTo(5);
+    }
+
+    @Test
+    public void givenDeleteCourseWhenLoadTheCourseThenExpectNoCourse() {
+        Course course =
+            new Course("Rapid Spring Boot Application Development",
+                    "Spring", 4,
+                    "Spring Boot gives all the power of the complexities");
+        Course savedCourse = courseRepository.save(course);
+        courseRepository.delete(savedCourse);
+        assertThat(courseRepository.findById(savedCourse.getId())
+            .isPresent()).isFalse();
+    }
+}
+```
+
+#### 本测试进行了三个验证：
+
+* 创建课程并确认可通过 ID 查找到
+* 更新课程评分并验证
+* 删除课程并验证无法查询
+
+### 讨论：JPA 注解的详细解释
+
+#### @Entity
+
+用于将 class 标记为 JPA 实体。实体会映射到数据库表。
+
+#### @Table
+
+指定数据库表名（默认使用类名）。  
+你在此示例中设置为 `COURSES`。
+
+#### @Id
+
+标识主键字段。
+
+#### @Column
+
+默认使用类字段名作为列名，也可以自定义列名，例如：
+
+```java
+@Column(name = "COURSE_ID")
+```
+
+#### @GeneratedValue(strategy = ...)
+
+可用策略：
+
+* **Table**
+  使用数据库表管理主键。
+
+* **Identity**
+  使用数据库自增列（你当前使用的策略）。
+
+* **Sequence**
+  使用数据库序列。
+
+* **Auto**
+  JPA 自动选择一个。
+
+#### @Repository 注解的作用
+
+* **自动检测（Auto Detection）**
+  因为它是 `@Component` 的派生注解，Spring 会自动扫描它。
+
+* **异常转换（Exception Translation）**
+  将底层异常（如 `SQLException`）转换成 Spring 统一的 `DataAccessException`。
+
+#### JPA 自动生成数据库 schema
+
+通过 `spring.jpa.hibernate.ddl-auto` 属性管理：
+
+* **none**：不生成
+* **validate**：校验表结构
+* **update**：更新表结构
+* **create**：启动时创建表
+* **create-drop**：启动创建、关闭时删除（默认用于内存数据库）
+
+::: warning schema.sql vs ddl-auto
+在上一节你学到 schema.sql
+这里你学到 ddl-auto
+两者不要同时启用，否则会冲突。
+若使用 schema.sql，请将 ddl-auto 设置为 `none`。
+:::
