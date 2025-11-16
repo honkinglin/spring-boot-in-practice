@@ -1012,3 +1012,268 @@ class CourseTrackerSpringBootApplicationTests {
 * `@WebMvcTest` 只加载 MVC 组件
 
 Spring Boot 推荐你在单元测试中使用这样的 **分层测试注解**，只加载你需要的那一层组件。
+
+## 3.4 使用 Spring Data 从数据库中检索数据（Retrieve data from a database using Spring Data）
+
+在前面的章节中，你已经学习了如何配置数据库以及管理业务领域对象或实体。  
+在本节中，你将学习多种技术，以便在 Spring Boot 应用程序中高效地从数据库中访问数据。
+
+### 3.4.1 定义查询方法（Defining query methods）
+
+在之前的技术中，你已经看到如何使用 `CrudRepository` 接口来管理业务领域对象。虽然该接口提供了标准的 CRUD 操作，但这些通用方法有时无法满足需求。你可能需要对领域对象进行更细粒度的操作，例如：
+
+* 根据实体属性而不是实体 ID（例如默认的 `findById(..)`）来查询实体
+* 在实体属性上使用条件（如 `Like`、`StartsWith`、`Containing` 等）
+* 按实体某些属性排序（升序、降序）
+
+Spring Data JPA 提供了两种定义自定义查询方法的方式，以满足这些需求：
+
+* **在 repository 接口中定义具有特定命名模式的方法**。Spring Data 会解析方法名并自动生成查询。
+* **定义自定义方法并提供自定义的 SQL 查询**，由 Spring Data 直接执行。
+
+在本节中，你将学习第一种方式——**通过方法命名规则定义查询方法**。Spring Data 内置了一套方法命名模式解析器，支持以下常见模式：
+
+#### 常用查询命名模式
+
+* **Query 查询模式**：定义 `find..By`、`read..By`、`get..By`、`query..By`、`stream..By`、`search..By` 方法
+* **Count 模式**：定义 `count..By()` 统计数量
+* **Exists 模式**：定义 `exists..By()` 判断实体是否存在
+* **Delete 模式**：定义 `delete..By()` 或 `remove..By()` 删除实体
+
+此外，还可以通过附加子句进行细化，例如：
+
+* `Distinct`
+* `All`
+* 使用 `And`、`Or` 拼接更多条件
+
+Spring Data 使用 **Subject（主题）** 与 **Predicate（谓词）** 的概念解析方法结构。例如：
+
+```
+findDistinctCourseByCategoryOrderByName()
+```
+
+* **DistinctCourse** 是 Subject
+* **CategoryOrderByName** 是 Predicate
+
+如下图所示：
+
+![3-6](../assets/3-6.png)
+
+### 3.4.2 技巧：使用 Spring Data JPA 定义自定义查询方法来检索领域对象（Technique: Defining custom query methods to retrieve domain objects from a relational database with Spring Data JPA）
+
+在本技巧中，我们将学习如何创建自定义查询方法以从关系型数据库中检索实体。
+
+#### Problem（问题）
+
+你需要在 Spring Boot 应用中使用 Spring Data JPA 定义自定义查询方法，以从关系型数据库检索实体。
+
+#### Solution（解决方案）
+
+Spring Data JPA 允许你定义自定义查询方法，从数据库中检索业务实体信息。本示例将展示如何在 `CourseTracker` 应用中定义若干自定义查询方法。
+
+#### Listing 3.21 自定义查询方法的 CourseRepository 接口（CourseRepository interface with custom query methods）
+
+```java
+@Repository
+public interface CourseRepository extends CrudRepository<Course, Long> {
+
+    Iterable<Course> findAllByCategory(String category);
+
+    Iterable<Course> findAllByCategoryOrderByName(String category);
+
+    boolean existsByName(String name);
+
+    long countByCategory(String category);
+
+    Iterable<Course> findByNameOrCategory(String name, String category);
+
+    Iterable<Course> findByNameStartsWith(String name);
+
+    Stream<Course> streamAllByCategory(String category);
+}
+```
+
+#### 解释方法含义：
+
+* **findAllByCategory**
+  最基本的查询方法，根据 category 返回一个实体列表。
+
+* **findAllByCategoryOrderByName**
+  在前一个方法基础上增加排序，根据 name 升序返回结果。
+
+* **existsByName**
+  检查给定课程名称是否存在，返回 `true` 或 `false`。
+
+* **countByCategory**
+  返回指定类别下课程的数量。
+
+* **findByNameOrCategory**
+  根据 course name 或 category 查询匹配的课程（逻辑 OR）。
+
+* **findByNameStartsWith**
+  查询名称以指定字符串开头的课程（类似 SQL 的 `LIKE 'x%'`）。
+
+* **streamAllByCategory**
+  根据类别返回一个 Java 8 Stream。
+
+#### Listing 3.22 单元测试：验证自定义查询方法（Unit test to validate custom query methods）
+
+```java
+@SpringBootTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Test
+    public void givenCreateCourseWhenLoadTheCourseThenExpectSameCourse() {
+
+        // 保存课程列表
+        courseRepository.saveAll(getCourseList());
+
+        assertThat(courseRepository.findAllByCategory("Spring"))
+            .hasSize(3);
+
+        assertThat(courseRepository.existsByName("JavaScript for All"))
+            .isTrue();
+
+        assertThat(courseRepository.existsByName("Mastering JavaScript"))
+            .isFalse();
+
+        assertThat(courseRepository.countByCategory("Python"))
+            .isEqualTo(2);
+
+        assertThat(courseRepository.findByNameStartsWith("Getting Started"))
+            .hasSize(3);
+    }
+
+    private List<Course> getCourseList() {
+        // 获取课程列表
+    }
+}
+```
+
+### Discussion（讨论）
+
+在本节中，你学习了 Spring Data JPA 的一些重要概念，总结如下：
+
+* 学会了如何基于实体属性定义自定义查询方法
+  你也看到了如何使用 `Or`、`StartsWith`、`OrderBy` 等关键字来控制查询条件与排序。
+
+* 学会了如何在 repository 方法中使用 Java 8 Stream。
+  Stream 可以配合 `map-filter-reduce` 等操作进一步处理数据，这是 `Iterable` 返回类型无法做到的。
+
+### 3.4.3 使用 PagingAndSortingRepository 实现分页（Implementing pagination with PagingAndSortingRepository）
+
+分页（Pagination）是一种将大量数据拆分为多个页面的技术。它是一种高效且对服务器友好的方式，将结果返回给用户。通常，应用用户不会查看超过前几个结果，因此如果你一次性加载大量数据，将浪费带宽和 CPU 资源。
+
+此外，如果返回的数据包含图像等大对象，会进一步拖慢页面加载速度并影响用户体验。试想，一个含有数百个商品的产品目录，每个条目都有一张图。
+
+Spring Data 提供了 `PagingAndSortingRepository` 接口，用来分页和排序返回的数据。由于该接口继承了 `CrudRepository`，因此你也能访问 `CrudRepository` 提供的所有基本 CRUD 方法。
+
+接下来我们将在下一小节探索如何使用 `PagingAndSortingRepository`。
+
+### 3.4.4 技巧：使用 PagingAndSortingRepository 接口进行分页和排序（Technique: Using PagingAndSortingRepository interface to paginate and sort the data）
+
+#### Problem
+
+加载、排序、并返回大量数据会浪费服务器资源，并影响应用的用户体验。你需要将数据按页返回给用户。
+
+#### Solution
+
+分页是一种将数据拆分为较小块（page）的技术。你可以配置页码和每页记录数量，以确定每个 page 中返回多少条数据。为了更好的用户体验，你还可以选择按升序或降序排序。
+
+在本技巧中，你将使用 Spring Data 内置的 `PagingAndSortingRepository` 实现分页。我们会加载一些课程数据并以分页的形式返回。
+
+#### 定义扩展 PagingAndSortingRepository 的 CourseRepository（Listing 3.23）
+
+```java
+@Repository
+public interface CourseRepository extends PagingAndSortingRepository<Course, Long> {
+
+}
+```
+
+#### 编写测试用例使用分页功能（Listing 3.24）
+
+```java
+@Test
+void givenDataAvailableWhenLoadFirstPageThenGetFiveRecords() {
+    Pageable pageable = PageRequest.of(0, 5);
+    assertThat(courseRepository.findAll(pageable)).hasSize(5);
+    assertThat(pageable.getPageNumber()).isEqualTo(0);
+
+    Pageable nextPageable = pageable.next();
+    assertThat(courseRepository.findAll(nextPageable)).hasSize(4);
+    assertThat(nextPageable.getPageNumber()).isEqualTo(1);
+}
+```
+
+#### 本测试执行了以下操作：
+
+* 使用 `PageRequest.of(pageNumber, pageSize)` 创建一个 `PageRequest` 实例。
+* `findAll(pageable)` 会加载对应页面的数据。
+* `pageable.next()` 获取下一页。
+* 检查每页返回的记录数量和页码。
+
+#### 使用分页 + 排序（Listing 3.25）
+
+```java
+@Test
+void givenDataAvailableWhenSortsFirstPageThenGetSortedData() {
+    Pageable pageable = PageRequest.of(0, 5, Sort.by(Sort.Order.asc("name")));
+
+    Condition<Course> sortedFirstCourseCondition = new Condition<Course>() {
+        @Override
+        public boolean matches(Course course) {
+            return course.getId() == 4
+                && course.getName().equals("Cloud Native Spring Boot Application Development");
+        }
+    };
+
+    assertThat(courseRepository.findAll(pageable))
+        .first()
+        .has(sortedFirstCourseCondition);
+}
+
+@Test
+void givenDataAvailableWhenApplyCustomSortThenGetSortedResult() {
+    Pageable customSortPageable = PageRequest.of(0, 5,
+        Sort.by("rating").descending().and(Sort.by("name")));
+
+    Condition<Course> customSortFirstCourseCondition = new Condition<Course>() {
+        @Override
+        public boolean matches(Course course) {
+            return course.getId() == 2
+                && course.getName().equals("Getting Started with Spring Security DSL");
+        }
+    };
+
+    assertThat(courseRepository.findAll(customSortPageable))
+        .first()
+        .has(customSortFirstCourseCondition);
+}
+```
+
+#### 以上代码展示了两种排序方式：
+
+* 自定义排序：按 name 升序排序
+* 组合排序：rating 降序 + name 升序
+
+#### Discussion
+
+`PagingAndSortingRepository` 是一个非常有用的接口，它提供分页和排序功能。其源码如下（Listing 3.26）：
+
+```java
+@NoRepositoryBean
+public interface PagingAndSortingRepository<T, ID> extends CrudRepository<T, ID> {
+
+    Page<T> findAll(Pageable pageable);
+
+    Iterable<T> findAll(Sort sort);
+}
+```
+
+* `findAll(Pageable pageable)` —— 用于分页查询
+* `findAll(Sort sort)` —— 单独用于排序查询
+
