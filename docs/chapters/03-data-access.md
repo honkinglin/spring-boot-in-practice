@@ -1277,3 +1277,170 @@ public interface PagingAndSortingRepository<T, ID> extends CrudRepository<T, ID>
 * `findAll(Pageable pageable)` —— 用于分页查询
 * `findAll(Sort sort)` —— 单独用于排序查询
 
+### 3.4.5 使用 @NamedQuery 指定查询（Specifying query using @NamedQuery）
+
+在 3.4.1 中你看到 Spring Data JPA 定义查询方法的两种方式。之前我们学习了第一种：通过方法命名规则让 Spring Data 自动解析方法并生成查询。
+
+本节你将学习第二种方式：
+**通过 @NamedQuery 手动定义查询，使 Spring Data 直接使用你提供的查询语句，而不是根据方法名推导。**
+
+#### 为什么要使用 @NamedQuery？
+
+虽然方法名解析方式适用于大多数场景，但在某些情况下，你可能需要显式定义查询，例如：
+
+* 你需要非常精确的查询，并且利用数据库特定的特性。
+* 你需要访问多个表（例如 JOIN 查询），而方法名方式无法很好表达。
+* 你希望重用查询语句。
+
+#### 什么是 NamedQuery？
+
+`NamedQuery` 是一个与业务实体关联的**预定义查询**，使用 JPQL（Jakarta Persistence Query Language）编写。
+
+Spring Data 允许你在：
+
+* 实体类
+* 实体的父类
+
+中定义 NamedQuery。
+
+`@NamedQuery` 注解包含四个属性：
+
+| 属性         | 说明               |
+| ---------- | ---------------- |
+| `name`     | 查询名称（必填）         |
+| `query`    | 查询的 JPQL 字符串（必填） |
+| `lockMode` | 可选，指定锁模式         |
+| `hints`    | 可选，数据库查询优化提示     |
+
+下面我们进入 3.4.6 的技巧示例。
+
+### 3.4.6 技巧：使用命名查询管理关系型数据库中的领域对象（Technique: Using a named query to manage domain objects in a relational database with Spring Data JPA）
+
+#### Problem
+
+你需要在 Spring Data JPA 中使用命名查询来定义自定义查询，以便在关系型数据库中管理领域对象。
+
+#### Solution
+
+虽然基于方法名自动解析的方式很好用，但在一些场景下它有局限性。例如：
+
+* 当你需要执行 JOIN 时，方法名方式难以表达；
+* 当查询逻辑复杂时，方法名会变得过长；
+* 你更希望手动定义查询语句。
+
+这时你可以使用 **Named Query**，将 JPQL 查询关联到实体上，并通过仓库接口的方法来调用。
+
+#### Source code
+
+本技巧的 Spring Boot 代码：
+
+* [基础版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/named-query-method/course-tracker-start)
+* [完整版本](https://github.com/honkinglin/spring-boot-in-practice/tree/main/ch03/named-query-method/course-tracker-final)
+
+#### 修改 Course 实体类，加入 @NamedQuery（Listing 3.27）
+
+```java
+package com.manning.sbip.ch03.model;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "COURSES")
+@NamedQuery(
+    name = "Course.findAllByCategoryAndRating",
+    query = "select c from Course c where c.category=?1 and c.rating=?2"
+)
+public class Course {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+
+    private String name;
+
+    // Remaining parts omitted for brevity
+}
+```
+
+#### 说明
+
+* `name` 属性：用于在仓库方法中关联查询名称
+* `query` 属性：JPQL 语句
+* 查询中使用了位置参数 `?1`、`?2`，分别对应方法参数中的 category 和 rating
+
+#### 使用多个 NamedQuery（Listing 3.28）
+
+你可以使用 `@NamedQueries` 定义多个查询：
+
+```java
+@Entity
+@Table(name = "COURSES")
+@NamedQueries({
+    @NamedQuery(
+        name = "Course.findAllByRating",
+        query = "select c from Course c where c.rating=?1"
+    ),
+    @NamedQuery(
+        name = "Course.findAllByCategoryAndRating",
+        query = "select c from Course c where c.category=?1 and c.rating=?2"
+    )
+})
+public class Course {
+    // other members omitted
+}
+```
+
+#### 更新 CourseRepository 以使用命名查询（Listing 3.29）
+
+```java
+package com.manning.sbip.ch03.repository;
+
+@Repository
+public interface CourseRepository extends CrudRepository<Course, Long> {
+
+    Iterable<Course> findAllByCategoryAndRating(String category, int rating);
+
+}
+```
+
+#### 注意
+
+这里的方法名称 **必须与 NamedQuery 的 name 匹配**：
+
+```
+Course.findAllByCategoryAndRating
+```
+
+Spring Data 会自动找到对应的命名查询。
+
+#### 编写测试用例验证 @NamedQuery（Listing 3.30）
+
+```java
+package com.manning.sbip.ch03;
+
+@SpringBootTest
+class CourseTrackerSpringBootApplicationTests {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Test
+    public void givenCoursesCreatedWhenLoadCoursesBySpringCategoryThenExpectThreeCourses() {
+        courseRepository.saveAll(getCourseList());
+        assertThat(
+            courseRepository.findAllByCategoryAndRating("Spring", 4)
+        ).hasSize(1);
+    }
+
+    private List<Course> getCourseList() {
+        // get course list
+    }
+}
+```
+
+#### 测试验证步骤：
+
+* 保存一组 Course 数据
+* 调用基于 NamedQuery 的方法 `findAllByCategoryAndRating`
+* 验证返回结果数量是否符合预期
+
